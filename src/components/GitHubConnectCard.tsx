@@ -1,19 +1,25 @@
-import { useState } from 'react';
-import { Github, GitBranch, Settings } from 'lucide-react';
+import { GitBranch, Github } from 'lucide-react';
+
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
 
 interface GitHubConnectCardProps {
   githubConnected: boolean;
+  githubUsername: string;
   gitlabConnected: boolean;
+  githubLoading: boolean;
+  githubError: string | null;
   onGithubConnect: () => void;
   onGitlabConnect: () => void;
 }
 
 export function GitHubConnectCard({
   githubConnected,
+  githubUsername,
   gitlabConnected,
+  githubLoading,
+  githubError,
   onGithubConnect,
   onGitlabConnect,
 }: GitHubConnectCardProps) {
@@ -21,26 +27,27 @@ export function GitHubConnectCard({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">
-            Choose your Version Control System
-          </CardTitle>
+          <CardTitle className="text-lg font-semibold">Choose your Version Control System</CardTitle>
           <a href="#" className="text-sm text-primary hover:underline">
             Need Help?
           </a>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         <div className="flex gap-4">
           <Button
-            variant={githubConnected ? "default" : "outline"}
+            variant={githubConnected ? 'default' : 'outline'}
             className={`flex-1 h-auto py-4 px-6 flex items-center justify-between ${
-              githubConnected ? "bg-primary text-white" : ""
+              githubConnected ? 'bg-primary text-white' : ''
             }`}
             onClick={onGithubConnect}
+            disabled={githubLoading}
           >
             <div className="flex items-center gap-3">
               <Github className="h-5 w-5" />
-              <span className="font-medium">Github</span>
+              <span className="font-medium">
+                {githubLoading ? 'Connecting...' : githubConnected ? 'Reconnect Github' : 'Connect Github'}
+              </span>
             </div>
             {githubConnected ? (
               <Badge variant="success" className="bg-green-500">
@@ -52,9 +59,9 @@ export function GitHubConnectCard({
           </Button>
 
           <Button
-            variant={gitlabConnected ? "default" : "outline"}
+            variant={gitlabConnected ? 'default' : 'outline'}
             className={`flex-1 h-auto py-4 px-6 flex items-center justify-between ${
-              gitlabConnected ? "bg-primary text-white" : ""
+              gitlabConnected ? 'bg-primary text-white' : ''
             }`}
             onClick={onGitlabConnect}
           >
@@ -71,6 +78,12 @@ export function GitHubConnectCard({
             )}
           </Button>
         </div>
+
+        {githubConnected && githubUsername ? (
+          <p className="text-sm text-muted-foreground">Connected as @{githubUsername}</p>
+        ) : null}
+
+        {githubError ? <p className="text-sm text-destructive">{githubError}</p> : null}
       </CardContent>
     </Card>
   );

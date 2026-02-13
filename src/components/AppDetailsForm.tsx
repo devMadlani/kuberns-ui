@@ -63,14 +63,14 @@ export function AppDetailsForm({
             <div className="space-y-2">
               <Label htmlFor="region" className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
-                Region
+                Region <span className="text-destructive">*</span>
               </Label>
               <Select
                 id="region"
                 value={selectedRegionId}
                 onChange={(e) => onRegionChange(e.target.value)}
               >
-                <option value="">*Choose Region</option>
+                <option value="">Choose Region</option>
                 {regions.map((region) => (
                   <option key={region.id} value={region.id}>
                     {region.name}
@@ -81,14 +81,14 @@ export function AppDetailsForm({
 
             <div className="space-y-2">
               <Label htmlFor="framework" className="flex items-center gap-2">
-                Framework / Template
+                Framework / Template <span className="text-destructive">*</span>
               </Label>
               <Select
                 id="framework"
                 value={selectedFrameworkId}
                 onChange={(e) => onFrameworkChange(e.target.value)}
               >
-                <option value="">*Choose Template</option>
+                <option value="">Choose Template</option>
                 {frameworks.map((framework) => (
                   <option key={framework.id} value={framework.id}>
                     {framework.name}

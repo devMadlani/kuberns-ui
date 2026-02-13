@@ -20,6 +20,8 @@ export interface Repository {
   id: string;
   name: string;
   organizationId: string;
+  owner?: string;
+  repoName?: string;
 }
 
 export interface Branch {
@@ -53,27 +55,24 @@ export interface EnvironmentVariable {
 }
 
 export interface AppFormData {
-  // GitHub Connection
   githubConnected: boolean;
   gitlabConnected: boolean;
+  githubUserId: string;
+  githubUsername: string;
   organizationId: string;
   repositoryId: string;
   branchId: string;
-  
-  // App Details
+
   appName: string;
   regionId: string;
   frameworkId: string;
   planId: string;
-  
-  // Database
+
   databaseEnabled: boolean;
   databaseTypeId: string;
-  
-  // Port Configuration
+
   portType: 'random' | 'custom';
   customPort: string;
-  
-  // Environment Variables
+
   environmentVariables: EnvironmentVariable[];
 }

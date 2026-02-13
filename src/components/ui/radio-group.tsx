@@ -22,7 +22,7 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
               value={option.value}
               checked={value === option.value}
               onChange={(e) => onValueChange?.(e.target.value)}
-              className="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 dark:bg-gray-800"
+              className="h-4 w-4 text-primary focus:ring-primary border-input bg-background"
             />
             <span className="text-sm font-medium">{option.label}</span>
           </label>

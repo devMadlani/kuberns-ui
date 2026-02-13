@@ -87,7 +87,7 @@ export function PlanSelector({
                         type="radio"
                         checked={isSelected}
                         onChange={() => onPlanSelect(plan.id)}
-                        className="h-4 w-4 text-primary dark:bg-gray-800 dark:border-gray-600"
+                        className="h-4 w-4 text-primary border-input bg-background"
                       />
                     </td>
                   </tr>

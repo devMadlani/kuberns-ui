@@ -43,7 +43,7 @@ export function DatabaseToggle({
           <div className="flex gap-3">
             <Button
               onClick={() => onToggle(true)}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white"
             >
               <Database className="h-4 w-4 mr-2" />
               Connect Database

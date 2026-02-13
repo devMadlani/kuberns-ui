@@ -41,6 +41,7 @@ export type InstanceSummary = {
   ram: number;
   storage: number;
   instanceType: string;
+  publicIp?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +56,11 @@ export type DeploymentSummary = {
   finishedAt: string | null;
   errorMessage: string | null;
   createdAt: string;
+};
+
+export type StartDeploymentResponse = {
+  publicIp: string;
+  status: 'active';
 };
 
 export type EnvironmentSummary = {
@@ -113,5 +119,12 @@ export const webappApi = {
 
   getWebApp: async (id: string): Promise<WebAppDetail> => {
     return request<WebAppDetail>(`/api/webapps/${id}`, { method: 'GET' });
+  },
+
+  startDeployment: async (deploymentId: string): Promise<StartDeploymentResponse> => {
+    return request<StartDeploymentResponse>(`/api/deployments/${deploymentId}/start`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
   },
 };

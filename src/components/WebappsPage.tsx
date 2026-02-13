@@ -165,6 +165,9 @@ const EnvironmentSection = ({
                     <MetricCard label="RAM MB" value={environment.instance.ram} />
                     <MetricCard label="Storage GB" value={environment.instance.storage} />
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground break-all">
+                    Public IP: {environment.instance.publicIp ?? '-'}
+                  </p>
                 </div>
               ) : null}
 
@@ -296,6 +299,9 @@ type DetailPanelContentProps = {
   detailData: WebAppDetail | null;
   detailLoading: boolean;
   detailError: string | null;
+  startDeploymentLoading: boolean;
+  startDeploymentError: string | null;
+  onStartDeployment: () => void;
   onRetryDetail: () => void;
 };
 
@@ -304,6 +310,9 @@ const DetailPanelContent = ({
   detailData,
   detailLoading,
   detailError,
+  startDeploymentLoading,
+  startDeploymentError,
+  onStartDeployment,
   onRetryDetail,
 }: DetailPanelContentProps): JSX.Element => {
   const [showDeploymentsExpanded, setShowDeploymentsExpanded] = useState(false);
@@ -348,10 +357,34 @@ const DetailPanelContent = ({
     return <></>;
   }
 
+  const latestDeployment = detailData.deployments[0];
+  const canStartDeployment =
+    latestDeployment && ['pending', 'failed'].includes(latestDeployment.status.toLowerCase());
+
   return (
     <div className="space-y-4">
       <HeaderBlock detailData={detailData} />
       <StatusMetrics detailData={detailData} />
+      <section className="rounded-xl border border-border bg-card p-3 text-xs shadow-sm space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-muted-foreground">
+            Deployment trigger: <strong>manual</strong>
+          </p>
+          {canStartDeployment ? (
+            <Button size="sm" onClick={onStartDeployment} disabled={startDeploymentLoading}>
+              {startDeploymentLoading ? 'Deploying...' : 'Deploy'}
+            </Button>
+          ) : null}
+        </div>
+        {!latestDeployment ? (
+          <p className="text-muted-foreground">No deployment record available.</p>
+        ) : (
+          <p className="text-muted-foreground">
+            Current status: <strong>{getStatusLabel(latestDeployment.status)}</strong>
+          </p>
+        )}
+        {startDeploymentError ? <p className="text-destructive">{startDeploymentError}</p> : null}
+      </section>
       <EnvironmentSection
         environments={detailData.environments}
         showEnvVarsByEnvironmentId={showEnvVarsByEnvironmentId}
@@ -387,6 +420,8 @@ export function WebappsPage() {
   const [detailData, setDetailData] = useState<WebAppDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [startDeploymentLoading, setStartDeploymentLoading] = useState(false);
+  const [startDeploymentError, setStartDeploymentError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -436,6 +471,7 @@ export function WebappsPage() {
   };
 
   const handleRowClick = async (webapp: WebAppListItem): Promise<void> => {
+    setStartDeploymentError(null);
     setSelectedWebappId(webapp.id);
     setIsDrawerOpen(true);
     await fetchDetail(webapp.id);
@@ -446,6 +482,8 @@ export function WebappsPage() {
     setDetailData(null);
     setDetailError(null);
     setDetailLoading(false);
+    setStartDeploymentLoading(false);
+    setStartDeploymentError(null);
     setIsDrawerOpen(false);
   };
 
@@ -455,6 +493,32 @@ export function WebappsPage() {
     }
 
     void fetchDetail(selectedWebappId);
+  };
+
+  const handleStartDeployment = async (): Promise<void> => {
+    if (!detailData || !selectedWebappId) {
+      return;
+    }
+
+    const latestDeployment = detailData.deployments[0];
+
+    if (!latestDeployment) {
+      setStartDeploymentError('No deployment record available.');
+      return;
+    }
+
+    setStartDeploymentLoading(true);
+    setStartDeploymentError(null);
+
+    try {
+      await webappApi.startDeployment(latestDeployment.id);
+      await fetchDetail(selectedWebappId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to start deployment';
+      setStartDeploymentError(message);
+    } finally {
+      setStartDeploymentLoading(false);
+    }
   };
 
   return (
@@ -546,6 +610,9 @@ export function WebappsPage() {
                 detailData={detailData}
                 detailLoading={detailLoading}
                 detailError={detailError}
+                startDeploymentLoading={startDeploymentLoading}
+                startDeploymentError={startDeploymentError}
+                onStartDeployment={() => void handleStartDeployment()}
                 onRetryDetail={retryDetail}
               />
             </CardContent>
@@ -573,6 +640,9 @@ export function WebappsPage() {
               detailData={detailData}
               detailLoading={detailLoading}
               detailError={detailError}
+              startDeploymentLoading={startDeploymentLoading}
+              startDeploymentError={startDeploymentError}
+              onStartDeployment={() => void handleStartDeployment()}
               onRetryDetail={retryDetail}
             />
           </div>

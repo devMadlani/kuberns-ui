@@ -4,10 +4,21 @@ import { useTheme } from '../contexts/ThemeContext';
 
 interface LayoutProps {
   children: React.ReactNode;
+  isAuthenticated?: boolean;
+  authEmail?: string;
+  onLogout?: () => void;
+  onOpenWebapps?: () => void;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({
+  children,
+  isAuthenticated = false,
+  authEmail = '',
+  onLogout,
+  onOpenWebapps,
+}: LayoutProps) {
   const { theme, toggleTheme } = useTheme();
+  const avatarLetter = authEmail ? authEmail[0]?.toUpperCase() : 'U';
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,9 +84,40 @@ export function Layout({ children }: LayoutProps) {
                   <Moon className="h-5 w-5" />
                 )}
               </Button>
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">U</span>
-              </div>
+              {isAuthenticated ? (
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center"
+                    aria-label="Open profile menu"
+                  >
+                    <span className="text-sm font-medium text-primary">{avatarLetter}</span>
+                  </button>
+                  <div className="absolute right-0 top-full z-20 hidden min-w-[180px] pt-2 group-hover:block group-focus-within:block">
+                    <div className="rounded-md border border-border bg-card shadow-lg">
+                      <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">{authEmail}</div>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                        onClick={onOpenWebapps}
+                      >
+                        All Webapps
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent text-destructive"
+                        onClick={onLogout}
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-medium text-primary">U</span>
+                </div>
+              )}
             </div>
           </div>
 

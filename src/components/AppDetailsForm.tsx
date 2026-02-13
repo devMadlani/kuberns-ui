@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Select } from './ui/select';
-import { Cloud, Globe } from 'lucide-react';
-import { Region, Framework } from '../types';
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Select } from "./ui/select";
+import { Cloud, Globe } from "lucide-react";
+import { Region, Framework } from "../types";
 
 interface AppDetailsFormProps {
   appName: string;
@@ -50,7 +50,7 @@ export function AppDetailsForm({
             <div className="space-y-2">
               <Label htmlFor="app-name" className="flex items-center gap-2">
                 <Cloud className="h-4 w-4" />
-                App Name
+                App Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="app-name"

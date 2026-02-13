@@ -3,12 +3,16 @@ import { Button } from './ui/button';
 import { PortConfiguration } from './PortConfiguration';
 import { EnvVariablesEditor } from './EnvVariablesEditor';
 import { AppFormData } from '../types';
+import { CreateWebAppResponse } from '../lib/webappApi';
 
 interface Screen2Props {
   formData: AppFormData;
   onFormDataChange: (data: AppFormData) => void;
   onBack: () => void;
-  onFinish: () => void;
+  onFinish: () => Promise<void>;
+  submitLoading: boolean;
+  submitError: string | null;
+  submitSuccess: CreateWebAppResponse | null;
 }
 
 export function Screen2({
@@ -16,6 +20,9 @@ export function Screen2({
   onFormDataChange,
   onBack,
   onFinish,
+  submitLoading,
+  submitError,
+  submitSuccess,
 }: Screen2Props) {
   const handlePortTypeChange = (type: 'random' | 'custom') => {
     onFormDataChange({ ...formData, portType: type });
@@ -68,11 +75,20 @@ export function Screen2({
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <Button onClick={onFinish} className="px-6 w-full sm:w-auto">
-          Finish my Setup
+        <Button onClick={() => void onFinish()} disabled={submitLoading} className="px-6 w-full sm:w-auto">
+          {submitLoading ? 'Creating...' : 'Finish my Setup'}
           <Play className="ml-2 h-4 w-4" />
         </Button>
       </div>
+      {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
+      {submitSuccess ? (
+        <div className="rounded-md border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+          <p className="font-medium">WebApp created successfully.</p>
+          <p>webAppId: {submitSuccess.webAppId}</p>
+          <p>deploymentId: {submitSuccess.deploymentId}</p>
+          <p>status: {submitSuccess.status}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,4 +1,12 @@
-import { Plan, Organization, Repository, Branch, Region, Framework, DatabaseType } from '../types';
+import {
+  Plan,
+  Organization,
+  Repository,
+  Branch,
+  Region,
+  Framework,
+  DatabaseType,
+} from '../types';
 
 export const mockPlans: Plan[] = [
   {
@@ -6,10 +14,10 @@ export const mockPlans: Plan[] = [
     name: 'Starter',
     storage: '10 GB',
     bandwidth: '10 GB',
-    memory: '10 GB',
-    cpu: '2 GB',
-    monthlyCost: '₹0',
-    pricePerHour: '₹0',
+    memory: '1024 MB',
+    cpu: '1 vCPU',
+    monthlyCost: '$0',
+    pricePerHour: '$0',
     description: 'Ideal for personal blogs and small websites',
   },
   {
@@ -17,22 +25,11 @@ export const mockPlans: Plan[] = [
     name: 'Pro',
     storage: '50 GB',
     bandwidth: '100 GB',
-    memory: '20 GB',
-    cpu: '4 GB',
-    monthlyCost: '₹999',
-    pricePerHour: '₹1.5',
+    memory: '4096 MB',
+    cpu: '2 vCPU',
+    monthlyCost: '$29',
+    pricePerHour: '$0.04',
     description: 'Perfect for growing businesses and applications',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    storage: '200 GB',
-    bandwidth: '500 GB',
-    memory: '50 GB',
-    cpu: '8 GB',
-    monthlyCost: '₹2999',
-    pricePerHour: '₹4.5',
-    description: 'For large-scale applications and enterprises',
   },
 ];
 
@@ -59,11 +56,9 @@ export const mockBranches: Branch[] = [
 ];
 
 export const mockRegions: Region[] = [
-  { id: 'us-michigan', name: 'United States - Michigan', country: 'US' },
-  { id: 'us-california', name: 'United States - California', country: 'US' },
-  { id: 'eu-ireland', name: 'Europe - Ireland', country: 'EU' },
-  { id: 'asia-singapore', name: 'Asia - Singapore', country: 'SG' },
-  { id: 'asia-mumbai', name: 'Asia - Mumbai', country: 'IN' },
+  { id: 'us-east-1', name: 'US East 1', country: 'US' },
+  { id: 'us-west-1', name: 'US West 1', country: 'US' },
+  { id: 'eu-central-1', name: 'EU Central 1', country: 'EU' },
 ];
 
 export const mockFrameworks: Framework[] = [

@@ -7,6 +7,7 @@ import { Screen1 } from './components/Screen1';
 import { Screen2 } from './components/Screen2';
 import { authApi } from './lib/authApi';
 import { githubApi } from './lib/githubApi';
+import { CreateWebAppResponse, webappApi } from './lib/webappApi';
 import { AppFormData } from './types';
 
 const GITHUB_USER_ID_STORAGE_KEY = 'kuberns.githubUserId';
@@ -48,6 +49,9 @@ function App() {
   const [authEmail, setAuthEmail] = useState<string>('');
   const [oauthProcessing, setOauthProcessing] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
+  const [createWebAppLoading, setCreateWebAppLoading] = useState(false);
+  const [createWebAppError, setCreateWebAppError] = useState<string | null>(null);
+  const [createWebAppSuccess, setCreateWebAppSuccess] = useState<CreateWebAppResponse | null>(null);
 
   const isGithubCallbackPage = location.pathname === '/oauth/github/callback';
 
@@ -151,9 +155,53 @@ function App() {
     setCurrentStep(1);
   };
 
-  const handleFinish = (): void => {
-    console.log('Form submitted:', formData);
-    alert('Setup completed! Check console for form data.');
+  const handleFinish = async (): Promise<void> => {
+    setCreateWebAppError(null);
+    setCreateWebAppSuccess(null);
+    setCreateWebAppLoading(true);
+
+    try {
+      const [owner, repo] = formData.repositoryId.split('/');
+
+      if (!owner || !repo) {
+        throw new Error('Invalid repository selection');
+      }
+
+      if (!formData.branchId) {
+        throw new Error('Please select a branch');
+      }
+
+      const resolvedPort =
+        formData.portType === 'custom'
+          ? Number(formData.customPort)
+          : 3000;
+
+      if (!Number.isInteger(resolvedPort) || resolvedPort < 1024 || resolvedPort > 65535) {
+        throw new Error('Port must be an integer between 1024 and 65535');
+      }
+
+      const response = await webappApi.createWebApp({
+        name: formData.appName,
+        region: formData.regionId,
+        plan: formData.planId,
+        framework: formData.frameworkId,
+        repository: {
+          provider: 'github',
+          owner,
+          repo,
+          branch: formData.branchId,
+        },
+        port: resolvedPort,
+        envVars: formData.environmentVariables.map(({ key, value }) => ({ key, value })),
+      });
+
+      setCreateWebAppSuccess(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create webapp';
+      setCreateWebAppError(message);
+    } finally {
+      setCreateWebAppLoading(false);
+    }
   };
 
   const handleLogin = async (email: string, password: string): Promise<void> => {
@@ -230,6 +278,8 @@ function App() {
     setIsAuthenticated(false);
     setAuthEmail('');
     setCurrentStep(1);
+    setCreateWebAppError(null);
+    setCreateWebAppSuccess(null);
     navigate('/login', { replace: true });
   };
 
@@ -315,6 +365,9 @@ function App() {
                   onFormDataChange={setFormData}
                   onBack={handleBack}
                   onFinish={handleFinish}
+                  submitLoading={createWebAppLoading}
+                  submitError={createWebAppError}
+                  submitSuccess={createWebAppSuccess}
                 />
               )
             }

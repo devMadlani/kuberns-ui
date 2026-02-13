@@ -35,9 +35,45 @@ export type WebAppListItem = {
   updatedAt: string;
 };
 
+export type InstanceSummary = {
+  id: string;
+  cpu: number;
+  ram: number;
+  storage: number;
+  instanceType: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeploymentSummary = {
+  id: string;
+  webAppId: string;
+  environmentId: string;
+  status: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+export type EnvironmentSummary = {
+  id: string;
+  webAppId: string;
+  name: string;
+  branch: string;
+  port: number;
+  envVars: Record<string, string>;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  instance: InstanceSummary | null;
+  deployments: DeploymentSummary[];
+};
+
 export type WebAppDetail = WebAppListItem & {
-  environments: unknown[];
-  deployments: unknown[];
+  environments: EnvironmentSummary[];
+  deployments: DeploymentSummary[];
 };
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {

@@ -3,7 +3,6 @@ import { Button } from './ui/button';
 import { PortConfiguration } from './PortConfiguration';
 import { EnvVariablesEditor } from './EnvVariablesEditor';
 import { AppFormData } from '../types';
-import { CreateWebAppResponse } from '../lib/webappApi';
 
 interface Screen2Props {
   formData: AppFormData;
@@ -12,7 +11,6 @@ interface Screen2Props {
   onFinish: () => Promise<void>;
   submitLoading: boolean;
   submitError: string | null;
-  submitSuccess: CreateWebAppResponse | null;
 }
 
 export function Screen2({
@@ -22,7 +20,6 @@ export function Screen2({
   onFinish,
   submitLoading,
   submitError,
-  submitSuccess,
 }: Screen2Props) {
   const handlePortTypeChange = (type: 'random' | 'custom') => {
     onFormDataChange({ ...formData, portType: type });
@@ -81,14 +78,6 @@ export function Screen2({
         </Button>
       </div>
       {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
-      {submitSuccess ? (
-        <div className="rounded-md border border-green-300 bg-green-50 p-4 text-sm text-green-800">
-          <p className="font-medium">WebApp created successfully.</p>
-          <p>webAppId: {submitSuccess.webAppId}</p>
-          <p>deploymentId: {submitSuccess.deploymentId}</p>
-          <p>status: {submitSuccess.status}</p>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -5,9 +5,10 @@ import { AuthPage } from './components/AuthPage';
 import { Layout } from './components/Layout';
 import { Screen1 } from './components/Screen1';
 import { Screen2 } from './components/Screen2';
+import { WebappsPage } from './components/WebappsPage';
 import { authApi } from './lib/authApi';
 import { githubApi } from './lib/githubApi';
-import { CreateWebAppResponse, webappApi } from './lib/webappApi';
+import { webappApi } from './lib/webappApi';
 import { AppFormData } from './types';
 
 const GITHUB_USER_ID_STORAGE_KEY = 'kuberns.githubUserId';
@@ -51,7 +52,6 @@ function App() {
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [createWebAppLoading, setCreateWebAppLoading] = useState(false);
   const [createWebAppError, setCreateWebAppError] = useState<string | null>(null);
-  const [createWebAppSuccess, setCreateWebAppSuccess] = useState<CreateWebAppResponse | null>(null);
 
   const isGithubCallbackPage = location.pathname === '/oauth/github/callback';
 
@@ -157,7 +157,6 @@ function App() {
 
   const handleFinish = async (): Promise<void> => {
     setCreateWebAppError(null);
-    setCreateWebAppSuccess(null);
     setCreateWebAppLoading(true);
 
     try {
@@ -194,8 +193,10 @@ function App() {
         port: resolvedPort,
         envVars: formData.environmentVariables.map(({ key, value }) => ({ key, value })),
       });
-
-      setCreateWebAppSuccess(response);
+      if (response.status === 'pending') {
+        setCreateWebAppError(null);
+        navigate('/webapps', { replace: true });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create webapp';
       setCreateWebAppError(message);
@@ -279,12 +280,11 @@ function App() {
     setAuthEmail('');
     setCurrentStep(1);
     setCreateWebAppError(null);
-    setCreateWebAppSuccess(null);
     navigate('/login', { replace: true });
   };
 
   const handleOpenWebapps = (): void => {
-    alert('Webapps table view will be added here.');
+    navigate('/webapps');
   };
 
   if (isGithubCallbackPage) {
@@ -367,11 +367,11 @@ function App() {
                   onFinish={handleFinish}
                   submitLoading={createWebAppLoading}
                   submitError={createWebAppError}
-                  submitSuccess={createWebAppSuccess}
                 />
               )
             }
           />
+          <Route path="/webapps" element={<WebappsPage />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/register" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />

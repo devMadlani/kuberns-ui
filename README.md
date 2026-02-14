@@ -87,9 +87,14 @@ User
 ### User
 
 - id
-- email
-- passwordHash
-- githubAccessToken
+- email (optional, unique)
+- password (optional)
+- emailVerified
+- emailOtpHash
+- emailOtpExpiry
+- githubId (optional, unique)
+- githubUsername
+- githubToken
 - createdAt
 - updatedAt
 
@@ -109,6 +114,7 @@ User
 - updatedAt
 
 Unique constraint: (userId, name)
+Index: userId
 
 ### Environment
 
@@ -121,6 +127,7 @@ Unique constraint: (userId, name)
 - status
 - createdAt
 - updatedAt
+Index: webAppId
 
 ### Instance
 
@@ -153,6 +160,73 @@ Unique constraint: (userId, name)
 - level (info | error)
 - message
 - createdAt
+Index: deploymentId
+
+### Relationship Notes (Implemented)
+
+- One `User` can own many `WebApp`
+- One `WebApp` can have many `Environment`
+- One `Environment` has one `Instance` (1:1 via unique `environmentId`)
+- One `WebApp` can have many `Deployment`
+- One `Deployment` can have many `DeploymentLog`
+
+### Configuration/API Models (Added)
+
+These are backend-served configuration models used by frontend setup screens.
+
+#### MetadataResponse (`GET /api/metadata`)
+
+- regions: `RegionMeta[]`
+- frameworks: `FrameworkMeta[]`
+- databaseTypes: `DatabaseTypeMeta[]`
+
+#### RegionMeta
+
+- id (AWS region id, e.g. `ap-south-1`)
+- name (display label)
+- country (display country/zone code)
+
+#### FrameworkMeta
+
+- id (e.g. `react`, `next`, `node`)
+- name (display name)
+
+#### DatabaseTypeMeta
+
+- id (e.g. `postgresql`, `mysql`, `mongodb`)
+- name (display name)
+
+#### PlanConfig (Backend source model)
+
+- id (`starter` | `pro`)
+- name
+- storage
+- bandwidth
+- memory
+- cpu
+- monthlyCost
+- pricePerHour
+- description
+- resources
+
+#### PlanResourceConfig (`PlanConfig.resources`)
+
+- cpu (number)
+- ram (MB)
+- storage (GB)
+- instanceType (AWS instance type)
+
+#### PlanResponse (`GET /api/plans`)
+
+- id
+- name
+- storage
+- bandwidth
+- memory
+- cpu
+- monthlyCost
+- pricePerHour
+- description
 
 This design ensures strong relational integrity, multi-tenant safety, and clean lifecycle tracking.
 
@@ -331,6 +405,34 @@ Deployment
 6. Solved IAM permission edge cases.
 7. Designed deployment lifecycle tracking.
 8. Persisted provisioning logs for observability.
+
+---
+
+## Additional Complex Patterns Adopted
+
+1. Auto-deploy handoff after app creation:
+Created `WebApp + Deployment`, redirected to `/webapps`, and triggered deployment from redirected context instead of blocking setup flow.
+
+2. Double-trigger protection (React Strict Mode + race conditions):
+Frontend uses one-shot deploy guards, and backend uses atomic status transition checks before provisioning to prevent duplicate EC2 launches.
+
+3. Deployment idempotency at service/repository level:
+`startDeployment` only proceeds from allowed states (`pending`/`failed`), otherwise returns conflict, preventing repeated provisioning.
+
+4. Real-time-ish deployment UX synchronization:
+Drawer and list use status refresh/polling so UI transitions from `deploying` to `active` as backend state changes.
+
+5. Sensitive value masking pattern:
+Public IP is masked by default with explicit `Show/Hide` toggle to reduce accidental exposure in shared screens.
+
+6. Dedicated configuration APIs for frontend controls:
+Region/framework/database metadata are loaded from backend API and plans are loaded from a separate plans API, reducing frontend hardcoding.
+
+7. Single-source plan strategy:
+Plan definitions are centralized on backend config and reused for validation, persisted webapp plan values, and AWS instance mapping.
+
+8. Deployment observability in UI:
+Frontend now fetches and renders `DeploymentLog` entries (`/deployments/:id/logs`) with loading/error/refresh behavior.
 
 ---
 

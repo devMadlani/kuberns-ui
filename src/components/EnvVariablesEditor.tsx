@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Eye, EyeOff } from 'lucide-react';
 import { EnvironmentVariable } from '../types';
 
 interface EnvVariablesEditorProps {
@@ -20,11 +19,15 @@ export function EnvVariablesEditor({
   const [editValue, setEditValue] = useState('');
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
+  const [showNewValue, setShowNewValue] = useState(false);
+  const [showEditValue, setShowEditValue] = useState(false);
+  const [visibleValueIds, setVisibleValueIds] = useState<Record<string, boolean>>({});
 
   const handleEdit = (variable: EnvironmentVariable) => {
     setEditingId(variable.id);
     setEditKey(variable.key);
     setEditValue(variable.value);
+    setShowEditValue(false);
   };
 
   const handleSave = () => {
@@ -38,6 +41,7 @@ export function EnvVariablesEditor({
       setEditingId(null);
       setEditKey('');
       setEditValue('');
+      setShowEditValue(false);
     }
   };
 
@@ -45,6 +49,7 @@ export function EnvVariablesEditor({
     setEditingId(null);
     setEditKey('');
     setEditValue('');
+    setShowEditValue(false);
   };
 
   const handleAdd = () => {
@@ -57,11 +62,23 @@ export function EnvVariablesEditor({
       onVariablesChange([...variables, newVar]);
       setNewKey('');
       setNewValue('');
+      setShowNewValue(false);
     }
   };
 
   const handleDelete = (id: string) => {
     onVariablesChange(variables.filter((v) => v.id !== id));
+  };
+
+  const getMaskedValue = (value: string): string => {
+    return '*'.repeat(Math.max(value.length, 8));
+  };
+
+  const toggleVisibleValue = (id: string): void => {
+    setVisibleValueIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
   return (
@@ -117,11 +134,23 @@ export function EnvVariablesEditor({
                       />
                     </div>
                     <div className="col-span-5">
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        placeholder="Enter Value"
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showEditValue ? 'text' : 'password'}
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          placeholder="Enter Value"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowEditValue((prev) => !prev)}
+                          aria-label={showEditValue ? 'Hide value' : 'Show value'}
+                        >
+                          {showEditValue ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                     <div className="col-span-2 flex gap-2 justify-end">
                       <Button
@@ -146,7 +175,21 @@ export function EnvVariablesEditor({
                   <>
                     <div className="col-span-5 text-sm font-medium">{variable.key}</div>
                     <div className="col-span-5 text-sm text-muted-foreground">
-                      {variable.value}
+                      <div className="inline-flex items-center gap-2">
+                        <span>{visibleValueIds[variable.id] ? variable.value : getMaskedValue(variable.value)}</span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => toggleVisibleValue(variable.id)}
+                          aria-label={visibleValueIds[variable.id] ? 'Hide value' : 'Show value'}
+                        >
+                          {visibleValueIds[variable.id] ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="col-span-2 flex gap-2 justify-end">
                       <Button
@@ -191,17 +234,29 @@ export function EnvVariablesEditor({
                 />
               </div>
               <div className="col-span-5">
-                <Input
-                  id="new-value"
-                  value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
-                  placeholder="Enter Value"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAdd();
-                    }
-                  }}
-                />
+                <div className="relative">
+                  <Input
+                    id="new-value"
+                    type={showNewValue ? 'text' : 'password'}
+                    value={newValue}
+                    onChange={(e) => setNewValue(e.target.value)}
+                    placeholder="Enter Value"
+                    className="pr-10"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAdd();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowNewValue((prev) => !prev)}
+                    aria-label={showNewValue ? 'Hide value' : 'Show value'}
+                  >
+                    {showNewValue ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div className="col-span-2 flex gap-2">
                 <Button

@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { mockDatabaseTypes, mockFrameworks, mockPlans, mockRegions } from '../data/mockData';
 import { githubApi } from '../lib/githubApi';
-import { AppFormData, Branch, Organization, Repository } from '../types';
+import { webappApi } from '../lib/webappApi';
+import { AppFormData, Branch, DatabaseType, Framework, Organization, Region, Repository } from '../types';
 import { AppDetailsForm } from './AppDetailsForm';
 import { DatabaseToggle } from './DatabaseToggle';
 import { GitHubConnectCard } from './GitHubConnectCard';
@@ -21,15 +22,41 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [regions, setRegions] = useState<Region[]>(mockRegions);
+  const [frameworks, setFrameworks] = useState<Framework[]>(mockFrameworks);
+  const [databaseTypes, setDatabaseTypes] = useState<DatabaseType[]>(mockDatabaseTypes);
 
   const [githubLoading, setGithubLoading] = useState(false);
   const [isOrgsLoading, setIsOrgsLoading] = useState(false);
   const [isReposLoading, setIsReposLoading] = useState(false);
   const [isBranchesLoading, setIsBranchesLoading] = useState(false);
+  const [isMetadataLoading, setIsMetadataLoading] = useState(false);
 
   const [githubError, setGithubError] = useState<string | null>(null);
   const [githubDataError, setGithubDataError] = useState<string | null>(null);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
   const requireOrganizationSelection = organizations.length > 0;
+
+  useEffect(() => {
+    const loadMetadata = async (): Promise<void> => {
+      setIsMetadataLoading(true);
+      setMetadataError(null);
+
+      try {
+        const metadata = await webappApi.getMetadata();
+        setRegions(metadata.regions);
+        setFrameworks(metadata.frameworks);
+        setDatabaseTypes(metadata.databaseTypes);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to load metadata';
+        setMetadataError(message);
+      } finally {
+        setIsMetadataLoading(false);
+      }
+    };
+
+    void loadMetadata();
+  }, []);
 
   const handleGithubConnect = async (): Promise<void> => {
     setGithubError(null);
@@ -251,8 +278,8 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
           appName={formData.appName}
           selectedRegionId={formData.regionId}
           selectedFrameworkId={formData.frameworkId}
-          regions={mockRegions}
-          frameworks={mockFrameworks}
+          regions={regions}
+          frameworks={frameworks}
           onAppNameChange={handleAppNameChange}
           onRegionChange={handleRegionChange}
           onFrameworkChange={handleFrameworkChange}
@@ -261,12 +288,14 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
         <PlanSelector plans={mockPlans} selectedPlanId={formData.planId} onPlanSelect={handlePlanSelect} />
 
         <DatabaseToggle
-          databaseTypes={mockDatabaseTypes}
+          databaseTypes={databaseTypes}
           enabled={formData.databaseEnabled}
           selectedDatabaseTypeId={formData.databaseTypeId}
           onToggle={handleDatabaseToggle}
           onDatabaseTypeChange={handleDatabaseTypeChange}
         />
+        {isMetadataLoading ? <p className="text-sm text-muted-foreground">Loading metadata...</p> : null}
+        {metadataError ? <p className="text-sm text-destructive">{metadataError}</p> : null}
       </div>
 
       <div className="flex justify-end pt-6">

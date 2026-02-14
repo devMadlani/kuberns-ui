@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import {
+  DeploymentLogEntry,
   DeploymentSummary,
   EnvironmentSummary,
   WebAppDetail,
@@ -329,8 +330,12 @@ type DetailPanelContentProps = {
   startDeploymentLoading: boolean;
   autoDeploying: boolean;
   startDeploymentError: string | null;
+  deploymentLogs: DeploymentLogEntry[];
+  logsLoading: boolean;
+  logsError: string | null;
   onStartDeployment: () => void;
   onRetryDetail: () => void;
+  onRefreshLogs: () => void;
 };
 
 const DetailPanelContent = ({
@@ -341,8 +346,12 @@ const DetailPanelContent = ({
   startDeploymentLoading,
   autoDeploying,
   startDeploymentError,
+  deploymentLogs,
+  logsLoading,
+  logsError,
   onStartDeployment,
   onRetryDetail,
+  onRefreshLogs,
 }: DetailPanelContentProps): JSX.Element => {
   const [showDeploymentsExpanded, setShowDeploymentsExpanded] = useState(false);
   const [showEnvVarsByEnvironmentId, setShowEnvVarsByEnvironmentId] = useState<Record<string, boolean>>({});
@@ -442,6 +451,34 @@ const DetailPanelContent = ({
         showDeploymentsExpanded={showDeploymentsExpanded}
         onToggleDeployments={() => setShowDeploymentsExpanded((prev) => !prev)}
       />
+      <section className="rounded-xl border border-border bg-card p-3 text-xs shadow-sm space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-semibold">Deployment Logs</p>
+          <Button size="sm" variant="outline" onClick={onRefreshLogs} disabled={logsLoading}>
+            {logsLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
+        {logsError ? <p className="text-destructive">{logsError}</p> : null}
+        {!logsError && logsLoading ? <p className="text-muted-foreground">Loading logs...</p> : null}
+        {!logsError && !logsLoading && deploymentLogs.length === 0 ? (
+          <p className="text-muted-foreground">No logs yet.</p>
+        ) : null}
+        {!logsError && deploymentLogs.length > 0 ? (
+          <div className="max-h-48 overflow-auto rounded border border-border">
+            <table className="w-full text-xs">
+              <tbody>
+                {deploymentLogs.map((log) => (
+                  <tr key={log.id} className="border-b border-border last:border-b-0">
+                    <td className="px-2 py-1.5 whitespace-nowrap text-muted-foreground">{formatDate(log.createdAt)}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap font-medium">{log.level.toUpperCase()}</td>
+                    <td className="px-2 py-1.5 break-all">{log.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
       {totalDeployments === 0 ? null : (
         <div className="rounded-xl border border-border bg-card p-3 text-xs text-muted-foreground shadow-sm">
           Latest deployment status: <strong>{getStatusLabel(detailData.deployments[0]?.status)}</strong>
@@ -467,6 +504,9 @@ export function WebappsPage() {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [startDeploymentLoading, setStartDeploymentLoading] = useState(false);
   const [startDeploymentError, setStartDeploymentError] = useState<string | null>(null);
+  const [deploymentLogs, setDeploymentLogs] = useState<DeploymentLogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isSelectedAutoDeploying =
     Boolean(selectedWebappId) && autoDeployingWebappId === selectedWebappId;
@@ -622,6 +662,34 @@ export function WebappsPage() {
     await fetchDetail(webapp.id);
   };
 
+  const fetchDeploymentLogs = async (deploymentId: string): Promise<void> => {
+    setLogsLoading(true);
+    setLogsError(null);
+
+    try {
+      const data = await webappApi.getDeploymentLogs(deploymentId);
+      setDeploymentLogs(data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load deployment logs';
+      setLogsError(message);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const latestDeploymentId = detailData?.deployments[0]?.id;
+
+  useEffect(() => {
+    if (!latestDeploymentId) {
+      setDeploymentLogs([]);
+      setLogsError(null);
+      setLogsLoading(false);
+      return;
+    }
+
+    void fetchDeploymentLogs(latestDeploymentId);
+  }, [latestDeploymentId]);
+
   const closeDetail = (): void => {
     setSelectedWebappId(null);
     setDetailData(null);
@@ -629,6 +697,9 @@ export function WebappsPage() {
     setDetailLoading(false);
     setStartDeploymentLoading(false);
     setStartDeploymentError(null);
+    setDeploymentLogs([]);
+    setLogsError(null);
+    setLogsLoading(false);
     setIsDrawerOpen(false);
   };
 
@@ -773,8 +844,17 @@ export function WebappsPage() {
                 startDeploymentLoading={startDeploymentLoading}
                 autoDeploying={Boolean(isSelectedAutoDeploying)}
                 startDeploymentError={startDeploymentError}
+                deploymentLogs={deploymentLogs}
+                logsLoading={logsLoading}
+                logsError={logsError}
                 onStartDeployment={() => void handleStartDeployment()}
                 onRetryDetail={retryDetail}
+                onRefreshLogs={() => {
+                  const latestDeploymentId = detailData?.deployments[0]?.id;
+                  if (latestDeploymentId) {
+                    void fetchDeploymentLogs(latestDeploymentId);
+                  }
+                }}
               />
             </CardContent>
           </Card>
@@ -804,8 +884,17 @@ export function WebappsPage() {
               startDeploymentLoading={startDeploymentLoading}
               autoDeploying={Boolean(isSelectedAutoDeploying)}
               startDeploymentError={startDeploymentError}
+              deploymentLogs={deploymentLogs}
+              logsLoading={logsLoading}
+              logsError={logsError}
               onStartDeployment={() => void handleStartDeployment()}
               onRetryDetail={retryDetail}
+              onRefreshLogs={() => {
+                const latestDeploymentId = detailData?.deployments[0]?.id;
+                if (latestDeploymentId) {
+                  void fetchDeploymentLogs(latestDeploymentId);
+                }
+              }}
             />
           </div>
         </div>

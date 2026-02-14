@@ -1,11 +1,10 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "../../lib/utils";
 
-export interface RadioGroupProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  options: { value: string; label: string }[]
-  value?: string
-  onValueChange?: (value: string) => void
+export interface RadioGroupProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  options: { value: string; label: string }[];
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
@@ -28,9 +27,9 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
           </label>
         ))}
       </div>
-    )
-  }
-)
-RadioGroup.displayName = "RadioGroup"
+    );
+  },
+);
+RadioGroup.displayName = "RadioGroup";
 
-export { RadioGroup }
+export { RadioGroup };

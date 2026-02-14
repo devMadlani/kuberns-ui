@@ -21,6 +21,12 @@ export type CreateWebAppResponse = {
   status: 'pending';
 };
 
+export type MetadataResponse = {
+  regions: Array<{ id: string; name: string; country: string }>;
+  frameworks: Array<{ id: string; name: string }>;
+  databaseTypes: Array<{ id: string; name: string }>;
+};
+
 export type WebAppListItem = {
   id: string;
   name: string;
@@ -55,6 +61,14 @@ export type DeploymentSummary = {
   startedAt: string | null;
   finishedAt: string | null;
   errorMessage: string | null;
+  createdAt: string;
+};
+
+export type DeploymentLogEntry = {
+  id: string;
+  deploymentId: string;
+  level: string;
+  message: string;
   createdAt: string;
 };
 
@@ -126,5 +140,15 @@ export const webappApi = {
       method: 'POST',
       body: JSON.stringify({}),
     });
+  },
+
+  getDeploymentLogs: async (deploymentId: string): Promise<DeploymentLogEntry[]> => {
+    return request<DeploymentLogEntry[]>(`/api/deployments/${deploymentId}/logs`, {
+      method: 'GET',
+    });
+  },
+
+  getMetadata: async (): Promise<MetadataResponse> => {
+    return request<MetadataResponse>('/api/metadata', { method: 'GET' });
   },
 };

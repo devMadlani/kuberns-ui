@@ -1,11 +1,12 @@
-﻿import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronUp,
   Clock3,
   Database,
   Layers,
+  Loader2,
   Rocket,
   Server,
   X,
@@ -116,13 +117,17 @@ const StatusMetrics = ({ detailData }: StatusMetricsProps): JSX.Element => {
 type EnvironmentSectionProps = {
   environments: EnvironmentSummary[];
   showEnvVarsByEnvironmentId: Record<string, boolean>;
+  showPublicIpByEnvironmentId: Record<string, boolean>;
   onToggleEnvVars: (environmentId: string) => void;
+  onTogglePublicIp: (environmentId: string) => void;
 };
 
 const EnvironmentSection = ({
   environments,
   showEnvVarsByEnvironmentId,
+  showPublicIpByEnvironmentId,
   onToggleEnvVars,
+  onTogglePublicIp,
 }: EnvironmentSectionProps): JSX.Element => {
   return (
     <section className="space-y-3">
@@ -138,6 +143,9 @@ const EnvironmentSection = ({
         environments.map((environment) => {
           const envVarsExpanded = Boolean(showEnvVarsByEnvironmentId[environment.id]);
           const envVars = Object.entries(environment.envVars ?? {});
+          const showPublicIp = Boolean(showPublicIpByEnvironmentId[environment.id]);
+          const publicIp = environment.instance?.publicIp ?? null;
+          const maskedPublicIp = publicIp ? publicIp.replace(/[0-9.]/g, '*') : '-';
 
           return (
             <div key={environment.id} className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
@@ -165,9 +173,28 @@ const EnvironmentSection = ({
                     <MetricCard label="RAM MB" value={environment.instance.ram} />
                     <MetricCard label="Storage GB" value={environment.instance.storage} />
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground break-all">
-                    Public IP: {environment.instance.publicIp ?? '-'}
-                  </p>
+                  <div
+                    className={`mt-2 flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-xs ${
+                      showPublicIp
+                        ? 'border-primary/40 bg-primary/10 text-primary'
+                        : 'border-border bg-background text-muted-foreground'
+                    }`}
+                  >
+                    <p className={`break-all ${showPublicIp ? 'font-semibold tracking-wide' : ''}`}>
+                      Public IP: {showPublicIp ? publicIp ?? '-' : maskedPublicIp}
+                    </p>
+                    {publicIp ? (
+                      <Button
+                        type="button"
+                        variant={showPublicIp ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => onTogglePublicIp(environment.id)}
+                      >
+                        {showPublicIp ? 'Hide' : 'Show'}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 
@@ -300,6 +327,7 @@ type DetailPanelContentProps = {
   detailLoading: boolean;
   detailError: string | null;
   startDeploymentLoading: boolean;
+  autoDeploying: boolean;
   startDeploymentError: string | null;
   onStartDeployment: () => void;
   onRetryDetail: () => void;
@@ -311,16 +339,19 @@ const DetailPanelContent = ({
   detailLoading,
   detailError,
   startDeploymentLoading,
+  autoDeploying,
   startDeploymentError,
   onStartDeployment,
   onRetryDetail,
 }: DetailPanelContentProps): JSX.Element => {
   const [showDeploymentsExpanded, setShowDeploymentsExpanded] = useState(false);
   const [showEnvVarsByEnvironmentId, setShowEnvVarsByEnvironmentId] = useState<Record<string, boolean>>({});
+  const [showPublicIpByEnvironmentId, setShowPublicIpByEnvironmentId] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setShowDeploymentsExpanded(false);
     setShowEnvVarsByEnvironmentId({});
+    setShowPublicIpByEnvironmentId({});
   }, [selectedWebappId]);
 
   const totalDeployments = detailData?.deployments.length ?? 0;
@@ -360,6 +391,7 @@ const DetailPanelContent = ({
   const latestDeployment = detailData.deployments[0];
   const canStartDeployment =
     latestDeployment && ['pending', 'failed'].includes(latestDeployment.status.toLowerCase());
+  const isDeploying = startDeploymentLoading || autoDeploying;
 
   return (
     <div className="space-y-4">
@@ -371,11 +403,14 @@ const DetailPanelContent = ({
             Deployment trigger: <strong>manual</strong>
           </p>
           {canStartDeployment ? (
-            <Button size="sm" onClick={onStartDeployment} disabled={startDeploymentLoading}>
-              {startDeploymentLoading ? 'Deploying...' : 'Deploy'}
+            <Button size="sm" onClick={onStartDeployment} disabled={isDeploying}>
+              {isDeploying ? 'Deploying...' : 'Deploy'}
             </Button>
           ) : null}
         </div>
+        {autoDeploying ? (
+          <p className="text-primary font-medium">Auto deployment in progress...</p>
+        ) : null}
         {!latestDeployment ? (
           <p className="text-muted-foreground">No deployment record available.</p>
         ) : (
@@ -388,8 +423,15 @@ const DetailPanelContent = ({
       <EnvironmentSection
         environments={detailData.environments}
         showEnvVarsByEnvironmentId={showEnvVarsByEnvironmentId}
+        showPublicIpByEnvironmentId={showPublicIpByEnvironmentId}
         onToggleEnvVars={(environmentId) => {
           setShowEnvVarsByEnvironmentId((prev) => ({
+            ...prev,
+            [environmentId]: !prev[environmentId],
+          }));
+        }}
+        onTogglePublicIp={(environmentId) => {
+          setShowPublicIpByEnvironmentId((prev) => ({
             ...prev,
             [environmentId]: !prev[environmentId],
           }));
@@ -411,10 +453,13 @@ const DetailPanelContent = ({
 
 export function WebappsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [webapps, setWebapps] = useState<WebAppListItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
+  const [autoDeployingWebappId, setAutoDeployingWebappId] = useState<string | null>(null);
+  const [autoDeployError, setAutoDeployError] = useState<string | null>(null);
 
   const [selectedWebappId, setSelectedWebappId] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<WebAppDetail | null>(null);
@@ -423,6 +468,8 @@ export function WebappsPage() {
   const [startDeploymentLoading, setStartDeploymentLoading] = useState(false);
   const [startDeploymentError, setStartDeploymentError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const isSelectedAutoDeploying =
+    Boolean(selectedWebappId) && autoDeployingWebappId === selectedWebappId;
 
   useEffect(() => {
     const loadList = async (): Promise<void> => {
@@ -442,6 +489,104 @@ export function WebappsPage() {
 
     void loadList();
   }, []);
+
+  useEffect(() => {
+    const state = location.state as
+      | { autoDeployWebAppId?: string; autoDeployDeploymentId?: string }
+      | null;
+
+    const autoDeployWebAppId = state?.autoDeployWebAppId;
+    const autoDeployDeploymentId = state?.autoDeployDeploymentId;
+
+    if (!autoDeployWebAppId || !autoDeployDeploymentId) {
+      return;
+    }
+
+    const autoDeployKey = `kuberns.autoDeploy.${autoDeployDeploymentId}`;
+    const alreadyStarted = sessionStorage.getItem(autoDeployKey) === '1';
+    sessionStorage.setItem(autoDeployKey, '1');
+
+    let cancelled = false;
+
+    const runAutoDeploy = async (): Promise<void> => {
+      setAutoDeployError(null);
+      setAutoDeployingWebappId(autoDeployWebAppId);
+
+      try {
+        if (!alreadyStarted) {
+          await webappApi.startDeployment(autoDeployDeploymentId);
+        } else {
+          try {
+            await webappApi.startDeployment(autoDeployDeploymentId);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to start deployment';
+            const isExpectedConflict = message.toLowerCase().includes('cannot be started');
+
+            if (!isExpectedConflict) {
+              throw error;
+            }
+          }
+        }
+
+        for (let attempt = 0; attempt < 40 && !cancelled; attempt += 1) {
+          const detail = await webappApi.getWebApp(autoDeployWebAppId);
+          const trackedDeployment = detail.deployments.find(
+            (deployment) => deployment.id === autoDeployDeploymentId,
+          );
+          const status = trackedDeployment?.status?.toLowerCase();
+
+          if (selectedWebappId === autoDeployWebAppId) {
+            setDetailData(detail);
+          }
+
+          if (status === 'active' || status === 'failed') {
+            break;
+          }
+
+          await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        }
+
+        const data = await webappApi.listWebApps();
+
+        if (!cancelled) {
+          setWebapps(data);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to start deployment';
+
+        if (!cancelled) {
+          setAutoDeployError(message);
+        }
+      } finally {
+        sessionStorage.removeItem(autoDeployKey);
+
+        if (!cancelled) {
+          setAutoDeployingWebappId(null);
+          navigate(location.pathname, { replace: true, state: null });
+        }
+      }
+    };
+
+    void runAutoDeploy();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, location.state, navigate, selectedWebappId]);
+
+  useEffect(() => {
+    if (!selectedWebappId || autoDeployingWebappId !== selectedWebappId) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void fetchDetail(selectedWebappId);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [autoDeployingWebappId, selectedWebappId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -535,6 +680,7 @@ export function WebappsPage() {
 
       {listLoading ? <p className="text-sm text-muted-foreground">Loading webapps...</p> : null}
       {listError ? <p className="text-sm text-destructive">{listError}</p> : null}
+      {autoDeployError ? <p className="text-sm text-destructive">{autoDeployError}</p> : null}
 
       {!listLoading && !listError && webapps.length === 0 ? (
         <Card>
@@ -568,25 +714,39 @@ export function WebappsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {webapps.map((webapp) => (
-                      <tr
-                        key={webapp.id}
-                        className={`border-b cursor-pointer hover:bg-muted/40 transition-colors ${
-                          selectedWebappId === webapp.id ? 'bg-muted/30 ring-1 ring-primary/20' : ''
-                        }`}
-                        onClick={() => void handleRowClick(webapp)}
-                      >
-                        <td className="py-2 px-2 text-sm font-medium">{webapp.name}</td>
-                        <td className="py-2 px-2 text-sm">{webapp.region}</td>
-                        <td className="py-2 px-2 text-sm">{webapp.plan}</td>
-                        <td className="py-2 px-2 text-sm">{webapp.framework}</td>
-                        <td className="py-2 px-2 text-sm text-muted-foreground">
-                          {webapp.repoOwner}/{webapp.repoName}
-                        </td>
-                        <td className="py-2 px-2 text-sm">{webapp.defaultBranch}</td>
-                        <td className="py-2 px-2 text-sm text-muted-foreground">{formatDate(webapp.createdAt)}</td>
-                      </tr>
-                    ))}
+                    {webapps.map((webapp) => {
+                      const isAutoDeploying = autoDeployingWebappId === webapp.id;
+
+                      return (
+                        <tr
+                          key={webapp.id}
+                          className={`border-b cursor-pointer hover:bg-muted/40 transition-colors ${
+                            selectedWebappId === webapp.id ? 'bg-muted/30 ring-1 ring-primary/20' : ''
+                          }`}
+                          onClick={() => void handleRowClick(webapp)}
+                        >
+                          <td className="py-2 px-2 text-sm font-medium">
+                            <span className="inline-flex items-center gap-2">
+                              {webapp.name}
+                              {isAutoDeploying ? (
+                                <span className="inline-flex items-center gap-1 text-xs text-primary">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  Deploying...
+                                </span>
+                              ) : null}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-sm">{webapp.region}</td>
+                          <td className="py-2 px-2 text-sm">{webapp.plan}</td>
+                          <td className="py-2 px-2 text-sm">{webapp.framework}</td>
+                          <td className="py-2 px-2 text-sm text-muted-foreground">
+                            {webapp.repoOwner}/{webapp.repoName}
+                          </td>
+                          <td className="py-2 px-2 text-sm">{webapp.defaultBranch}</td>
+                          <td className="py-2 px-2 text-sm text-muted-foreground">{formatDate(webapp.createdAt)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -611,6 +771,7 @@ export function WebappsPage() {
                 detailLoading={detailLoading}
                 detailError={detailError}
                 startDeploymentLoading={startDeploymentLoading}
+                autoDeploying={Boolean(isSelectedAutoDeploying)}
                 startDeploymentError={startDeploymentError}
                 onStartDeployment={() => void handleStartDeployment()}
                 onRetryDetail={retryDetail}
@@ -641,6 +802,7 @@ export function WebappsPage() {
               detailLoading={detailLoading}
               detailError={detailError}
               startDeploymentLoading={startDeploymentLoading}
+              autoDeploying={Boolean(isSelectedAutoDeploying)}
               startDeploymentError={startDeploymentError}
               onStartDeployment={() => void handleStartDeployment()}
               onRetryDetail={retryDetail}
@@ -651,3 +813,4 @@ export function WebappsPage() {
     </div>
   );
 }
+

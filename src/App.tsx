@@ -1,39 +1,47 @@
-import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
-import { AuthPage } from './components/AuthPage';
-import { Layout } from './components/Layout';
-import { Screen1 } from './components/Screen1';
-import { Screen2 } from './components/Screen2';
-import { WebappsPage } from './components/WebappsPage';
-import { authApi } from './lib/authApi';
-import { githubApi } from './lib/githubApi';
-import { webappApi } from './lib/webappApi';
-import { AppFormData } from './types';
+import { AuthPage } from "./components/AuthPage";
+import { Layout } from "./components/Layout";
+import { Screen1 } from "./components/Screen1";
+import { Screen2 } from "./components/Screen2";
+import { WebappsPage } from "./components/WebappsPage";
+import { authApi } from "./lib/authApi";
+import { githubApi } from "./lib/githubApi";
+import { webappApi } from "./lib/webappApi";
+import { AppFormData } from "./types";
 
-const GITHUB_USER_ID_STORAGE_KEY = 'kuberns.githubUserId';
-const GITHUB_USERNAME_STORAGE_KEY = 'kuberns.githubUsername';
+const GITHUB_USER_ID_STORAGE_KEY = "kuberns.githubUserId";
+const GITHUB_USERNAME_STORAGE_KEY = "kuberns.githubUsername";
 
 const createInitialFormData = (): AppFormData => {
-  const savedGithubUserId = sessionStorage.getItem(GITHUB_USER_ID_STORAGE_KEY) ?? '';
-  const savedGithubUsername = sessionStorage.getItem(GITHUB_USERNAME_STORAGE_KEY) ?? '';
+  const savedGithubUserId =
+    sessionStorage.getItem(GITHUB_USER_ID_STORAGE_KEY) ?? "";
+  const savedGithubUsername =
+    sessionStorage.getItem(GITHUB_USERNAME_STORAGE_KEY) ?? "";
 
   return {
     githubConnected: Boolean(savedGithubUserId),
     gitlabConnected: false,
     githubUserId: savedGithubUserId,
     githubUsername: savedGithubUsername,
-    organizationId: '',
-    repositoryId: '',
-    branchId: '',
-    appName: '',
-    regionId: '',
-    frameworkId: '',
-    planId: '',
+    organizationId: "",
+    repositoryId: "",
+    branchId: "",
+    appName: "",
+    regionId: "",
+    frameworkId: "",
+    planId: "",
     databaseEnabled: false,
-    databaseTypeId: '',
-    portType: 'random',
-    customPort: '',
+    databaseTypeId: "",
+    portType: "random",
+    customPort: "",
     environmentVariables: [],
   };
 };
@@ -42,27 +50,31 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
-  const [formData, setFormData] = useState<AppFormData>(() => createInitialFormData());
+  const [formData, setFormData] = useState<AppFormData>(() =>
+    createInitialFormData(),
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [authActionLoading, setAuthActionLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [authEmail, setAuthEmail] = useState<string>('');
+  const [authEmail, setAuthEmail] = useState<string>("");
   const [oauthProcessing, setOauthProcessing] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [createWebAppLoading, setCreateWebAppLoading] = useState(false);
-  const [createWebAppError, setCreateWebAppError] = useState<string | null>(null);
+  const [createWebAppError, setCreateWebAppError] = useState<string | null>(
+    null,
+  );
 
-  const isGithubCallbackPage = location.pathname === '/oauth/github/callback';
+  const isGithubCallbackPage = location.pathname === "/oauth/github/callback";
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
-    const githubConnected = query.get('githubConnected');
-    const githubId = query.get('githubId');
-    const githubUsername = query.get('githubUsername');
-    const error = query.get('error');
+    const githubConnected = query.get("githubConnected");
+    const githubId = query.get("githubId");
+    const githubUsername = query.get("githubUsername");
+    const error = query.get("error");
 
-    if (githubConnected === 'true' && githubId && githubUsername) {
+    if (githubConnected === "true" && githubId && githubUsername) {
       sessionStorage.setItem(GITHUB_USER_ID_STORAGE_KEY, githubId);
       sessionStorage.setItem(GITHUB_USERNAME_STORAGE_KEY, githubUsername);
 
@@ -74,7 +86,7 @@ function App() {
       }));
     }
 
-    if (githubConnected === 'false' && error) {
+    if (githubConnected === "false" && error) {
       setOauthError(error);
     }
 
@@ -106,8 +118,9 @@ function App() {
       }
 
       const query = new URLSearchParams(window.location.search);
-      const code = query.get('code');
-      const oauthErrorMessage = query.get('error_description') ?? query.get('error');
+      const code = query.get("code");
+      const oauthErrorMessage =
+        query.get("error_description") ?? query.get("error");
 
       if (oauthErrorMessage) {
         setOauthError(oauthErrorMessage);
@@ -115,7 +128,7 @@ function App() {
       }
 
       if (!code) {
-        setOauthError('Missing OAuth code in callback URL');
+        setOauthError("Missing OAuth code in callback URL");
         return;
       }
 
@@ -126,7 +139,10 @@ function App() {
         const result = await githubApi.completeOAuth(code);
 
         sessionStorage.setItem(GITHUB_USER_ID_STORAGE_KEY, result.githubId);
-        sessionStorage.setItem(GITHUB_USERNAME_STORAGE_KEY, result.githubUsername);
+        sessionStorage.setItem(
+          GITHUB_USERNAME_STORAGE_KEY,
+          result.githubUsername,
+        );
 
         setFormData((prev) => ({
           ...prev,
@@ -135,9 +151,10 @@ function App() {
           githubUsername: result.githubUsername,
         }));
 
-        navigate('/', { replace: true });
+        navigate("/", { replace: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'GitHub callback failed';
+        const message =
+          error instanceof Error ? error.message : "GitHub callback failed";
         setOauthError(message);
       } finally {
         setOauthProcessing(false);
@@ -160,23 +177,25 @@ function App() {
     setCreateWebAppLoading(true);
 
     try {
-      const [owner, repo] = formData.repositoryId.split('/');
+      const [owner, repo] = formData.repositoryId.split("/");
 
       if (!owner || !repo) {
-        throw new Error('Invalid repository selection');
+        throw new Error("Invalid repository selection");
       }
 
       if (!formData.branchId) {
-        throw new Error('Please select a branch');
+        throw new Error("Please select a branch");
       }
 
       const resolvedPort =
-        formData.portType === 'custom'
-          ? Number(formData.customPort)
-          : 3000;
+        formData.portType === "custom" ? Number(formData.customPort) : 3000;
 
-      if (!Number.isInteger(resolvedPort) || resolvedPort < 1024 || resolvedPort > 65535) {
-        throw new Error('Port must be an integer between 1024 and 65535');
+      if (
+        !Number.isInteger(resolvedPort) ||
+        resolvedPort < 1024 ||
+        resolvedPort > 65535
+      ) {
+        throw new Error("Port must be an integer between 1024 and 65535");
       }
 
       const response = await webappApi.createWebApp({
@@ -185,27 +204,42 @@ function App() {
         plan: formData.planId,
         framework: formData.frameworkId,
         repository: {
-          provider: 'github',
+          provider: "github",
           owner,
           repo,
           branch: formData.branchId,
         },
         port: resolvedPort,
-        envVars: formData.environmentVariables.map(({ key, value }) => ({ key, value })),
+        envVars: formData.environmentVariables.map(({ key, value }) => ({
+          key,
+          value,
+        })),
       });
-      if (response.status === 'pending') {
+      if (response.status === "pending") {
         setCreateWebAppError(null);
-        navigate('/webapps', { replace: true });
+        navigate("/webapps", {
+          replace: true,
+          state: {
+            autoDeployWebAppId: response.webAppId,
+            autoDeployDeploymentId: response.deploymentId,
+          },
+        });
+        setFormData(createInitialFormData());
+        setCurrentStep(1);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create webapp';
+      const message =
+        error instanceof Error ? error.message : "Failed to create webapp";
       setCreateWebAppError(message);
     } finally {
       setCreateWebAppLoading(false);
     }
   };
 
-  const handleLogin = async (email: string, password: string): Promise<void> => {
+  const handleLogin = async (
+    email: string,
+    password: string,
+  ): Promise<void> => {
     setAuthError(null);
     setAuthActionLoading(true);
 
@@ -213,16 +247,19 @@ function App() {
       const user = await authApi.login(email, password);
       setIsAuthenticated(true);
       setAuthEmail(user.email);
-      navigate('/', { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login failed';
+      const message = error instanceof Error ? error.message : "Login failed";
       setAuthError(message);
     } finally {
       setAuthActionLoading(false);
     }
   };
 
-  const handleRegister = async (email: string, password: string): Promise<{ email: string; otpPreview?: string }> => {
+  const handleRegister = async (
+    email: string,
+    password: string,
+  ): Promise<{ email: string; otpPreview?: string }> => {
     setAuthError(null);
     setAuthActionLoading(true);
 
@@ -233,7 +270,8 @@ function App() {
         otpPreview: result.otpPreview,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Registration failed';
+      const message =
+        error instanceof Error ? error.message : "Registration failed";
       setAuthError(message);
       throw error;
     } finally {
@@ -249,9 +287,10 @@ function App() {
       const user = await authApi.verifyOtp(email, otp);
       setIsAuthenticated(true);
       setAuthEmail(user.email);
-      navigate('/', { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'OTP verification failed';
+      const message =
+        error instanceof Error ? error.message : "OTP verification failed";
       setAuthError(message);
       throw error;
     } finally {
@@ -259,14 +298,17 @@ function App() {
     }
   };
 
-  const handleResendOtp = async (email: string): Promise<{ otpPreview?: string }> => {
+  const handleResendOtp = async (
+    email: string,
+  ): Promise<{ otpPreview?: string }> => {
     setAuthError(null);
     setAuthActionLoading(true);
 
     try {
       return await authApi.resendOtp(email);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to resend OTP';
+      const message =
+        error instanceof Error ? error.message : "Unable to resend OTP";
       setAuthError(message);
       throw error;
     } finally {
@@ -277,23 +319,29 @@ function App() {
   const handleLogout = async (): Promise<void> => {
     await authApi.logout();
     setIsAuthenticated(false);
-    setAuthEmail('');
+    setAuthEmail("");
     setCurrentStep(1);
     setCreateWebAppError(null);
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const handleOpenWebapps = (): void => {
-    navigate('/webapps');
+    navigate("/webapps");
   };
 
   if (isGithubCallbackPage) {
     return (
-      <Layout isAuthenticated={isAuthenticated} authEmail={authEmail} onLogout={() => void handleLogout()}>
+      <Layout
+        isAuthenticated={isAuthenticated}
+        authEmail={authEmail}
+        onLogout={() => void handleLogout()}
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-0 py-12">
           <h1 className="text-2xl font-bold">GitHub Connection</h1>
           <p className="mt-3 text-muted-foreground">
-            {oauthProcessing ? 'Completing OAuth with backend...' : oauthError ?? 'Connected successfully.'}
+            {oauthProcessing
+              ? "Completing OAuth with backend..."
+              : (oauthError ?? "Connected successfully.")}
           </p>
         </div>
       </Layout>
@@ -328,7 +376,9 @@ function App() {
                 onRegister={handleRegister}
                 onVerifyOtp={handleVerifyOtp}
                 onResendOtp={handleResendOtp}
-                onSwitchMode={(mode) => navigate(mode === 'login' ? '/login' : '/register')}
+                onSwitchMode={(mode) =>
+                  navigate(mode === "login" ? "/login" : "/register")
+                }
                 loading={authActionLoading}
                 error={authError}
               />
@@ -343,7 +393,9 @@ function App() {
                 onRegister={handleRegister}
                 onVerifyOtp={handleVerifyOtp}
                 onResendOtp={handleResendOtp}
-                onSwitchMode={(mode) => navigate(mode === 'login' ? '/login' : '/register')}
+                onSwitchMode={(mode) =>
+                  navigate(mode === "login" ? "/login" : "/register")
+                }
                 loading={authActionLoading}
                 error={authError}
               />
@@ -358,7 +410,11 @@ function App() {
             path="/"
             element={
               currentStep === 1 ? (
-                <Screen1 formData={formData} onFormDataChange={setFormData} onNext={handleNext} />
+                <Screen1
+                  formData={formData}
+                  onFormDataChange={setFormData}
+                  onNext={handleNext}
+                />
               ) : (
                 <Screen2
                   formData={formData}

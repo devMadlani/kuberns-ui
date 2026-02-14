@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { mockDatabaseTypes, mockFrameworks, mockPlans, mockRegions } from '../data/mockData';
 import { githubApi } from '../lib/githubApi';
 import { webappApi } from '../lib/webappApi';
-import { AppFormData, Branch, DatabaseType, Framework, Organization, Region, Repository } from '../types';
+import { AppFormData, Branch, DatabaseType, Framework, Organization, Plan, Region, Repository } from '../types';
 import { AppDetailsForm } from './AppDetailsForm';
 import { DatabaseToggle } from './DatabaseToggle';
 import { GitHubConnectCard } from './GitHubConnectCard';
@@ -25,16 +25,19 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
   const [regions, setRegions] = useState<Region[]>(mockRegions);
   const [frameworks, setFrameworks] = useState<Framework[]>(mockFrameworks);
   const [databaseTypes, setDatabaseTypes] = useState<DatabaseType[]>(mockDatabaseTypes);
+  const [plans, setPlans] = useState<Plan[]>(mockPlans);
 
   const [githubLoading, setGithubLoading] = useState(false);
   const [isOrgsLoading, setIsOrgsLoading] = useState(false);
   const [isReposLoading, setIsReposLoading] = useState(false);
   const [isBranchesLoading, setIsBranchesLoading] = useState(false);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
+  const [isPlansLoading, setIsPlansLoading] = useState(false);
 
   const [githubError, setGithubError] = useState<string | null>(null);
   const [githubDataError, setGithubDataError] = useState<string | null>(null);
   const [metadataError, setMetadataError] = useState<string | null>(null);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const requireOrganizationSelection = organizations.length > 0;
 
   useEffect(() => {
@@ -56,6 +59,25 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
     };
 
     void loadMetadata();
+  }, []);
+
+  useEffect(() => {
+    const loadPlans = async (): Promise<void> => {
+      setIsPlansLoading(true);
+      setPlansError(null);
+
+      try {
+        const data = await webappApi.getPlans();
+        setPlans(data);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to load plans';
+        setPlansError(message);
+      } finally {
+        setIsPlansLoading(false);
+      }
+    };
+
+    void loadPlans();
   }, []);
 
   const handleGithubConnect = async (): Promise<void> => {
@@ -285,7 +307,7 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
           onFrameworkChange={handleFrameworkChange}
         />
 
-        <PlanSelector plans={mockPlans} selectedPlanId={formData.planId} onPlanSelect={handlePlanSelect} />
+        <PlanSelector plans={plans} selectedPlanId={formData.planId} onPlanSelect={handlePlanSelect} />
 
         <DatabaseToggle
           databaseTypes={databaseTypes}
@@ -296,6 +318,8 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
         />
         {isMetadataLoading ? <p className="text-sm text-muted-foreground">Loading metadata...</p> : null}
         {metadataError ? <p className="text-sm text-destructive">{metadataError}</p> : null}
+        {isPlansLoading ? <p className="text-sm text-muted-foreground">Loading plans...</p> : null}
+        {plansError ? <p className="text-sm text-destructive">{plansError}</p> : null}
       </div>
 
       <div className="flex justify-end pt-6">

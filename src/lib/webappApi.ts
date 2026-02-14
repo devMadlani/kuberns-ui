@@ -27,6 +27,18 @@ export type MetadataResponse = {
   databaseTypes: Array<{ id: string; name: string }>;
 };
 
+export type PlanResponse = {
+  id: string;
+  name: string;
+  storage: string;
+  bandwidth: string;
+  memory: string;
+  cpu: string;
+  monthlyCost: string;
+  pricePerHour: string;
+  description: string;
+};
+
 export type WebAppListItem = {
   id: string;
   name: string;
@@ -150,5 +162,9 @@ export const webappApi = {
 
   getMetadata: async (): Promise<MetadataResponse> => {
     return request<MetadataResponse>('/api/metadata', { method: 'GET' });
+  },
+
+  getPlans: async (): Promise<PlanResponse[]> => {
+    return request<PlanResponse[]>('/api/plans', { method: 'GET' });
   },
 };

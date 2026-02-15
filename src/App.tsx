@@ -172,6 +172,20 @@ function App() {
     void handleGithubCallback();
   }, [isGithubCallbackPage, location.search, navigate]);
 
+  useEffect(() => {
+    if (!oauthError) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setOauthError(null);
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [oauthError]);
+
   const handleNext = (): void => {
     setCurrentStep(2);
   };

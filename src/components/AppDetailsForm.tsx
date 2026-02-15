@@ -16,6 +16,43 @@ interface AppDetailsFormProps {
   onFrameworkChange: (frameworkId: string) => void;
 }
 
+const regionGroupOrder = [
+  "United States",
+  "Asia Pacific",
+  "Canada",
+  "Europe",
+  "South America",
+] as const;
+
+const resolveRegionGroup = (regionId: string): string => {
+  if (regionId.startsWith("us-")) {
+    return "United States";
+  }
+
+  if (regionId.startsWith("ap-")) {
+    return "Asia Pacific";
+  }
+
+  if (regionId.startsWith("ca-")) {
+    return "Canada";
+  }
+
+  if (regionId.startsWith("eu-")) {
+    return "Europe";
+  }
+
+  if (regionId.startsWith("sa-")) {
+    return "South America";
+  }
+
+  return "Other";
+};
+
+type RegionGroup = {
+  groupName: string;
+  regions: Region[];
+};
+
 export function AppDetailsForm({
   appName,
   selectedRegionId,
@@ -26,6 +63,13 @@ export function AppDetailsForm({
   onRegionChange,
   onFrameworkChange,
 }: AppDetailsFormProps) {
+  const groupedRegions: RegionGroup[] = regionGroupOrder
+    .map((groupName) => ({
+      groupName,
+      regions: regions.filter((region) => resolveRegionGroup(region.id) === groupName),
+    }))
+    .filter((group) => group.regions.length > 0);
+
   return (
     <Card>
       <CardHeader>
@@ -71,10 +115,14 @@ export function AppDetailsForm({
                 onChange={(e) => onRegionChange(e.target.value)}
               >
                 <option value="">Choose Region</option>
-                {regions.map((region) => (
-                  <option key={region.id} value={region.id}>
-                    {region.name}
-                  </option>
+                {groupedRegions.map((group) => (
+                  <optgroup key={group.groupName} label={group.groupName}>
+                    {group.regions.map((region) => (
+                      <option key={region.id} value={region.id}>
+                        {region.name} ({region.id})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </Select>
             </div>

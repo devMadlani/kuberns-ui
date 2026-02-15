@@ -355,6 +355,12 @@ function App() {
     navigate("/webapps");
   };
 
+  const handleAddNew = (): void => {
+    setCurrentStep(1);
+    setCreateWebAppError(null);
+    navigate("/");
+  };
+
   if (isGithubCallbackPage) {
     return (
       <Layout
@@ -380,6 +386,7 @@ function App() {
       authEmail={authEmail}
       onLogout={() => void handleLogout()}
       onOpenWebapps={handleOpenWebapps}
+      onAddNew={handleAddNew}
     >
       {oauthError ? (
         <div className="max-w-6xl mx-auto px-4 sm:px-0 pt-4">

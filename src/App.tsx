@@ -20,17 +20,17 @@ import { AppFormData } from "./types";
 const GITHUB_USER_ID_STORAGE_KEY = "kuberns.githubUserId";
 const GITHUB_USERNAME_STORAGE_KEY = "kuberns.githubUsername";
 
-const createInitialFormData = (): AppFormData => {
-  const savedGithubUserId =
-    sessionStorage.getItem(GITHUB_USER_ID_STORAGE_KEY) ?? "";
-  const savedGithubUsername =
-    sessionStorage.getItem(GITHUB_USERNAME_STORAGE_KEY) ?? "";
+const clearGithubSession = (): void => {
+  sessionStorage.removeItem(GITHUB_USER_ID_STORAGE_KEY);
+  sessionStorage.removeItem(GITHUB_USERNAME_STORAGE_KEY);
+};
 
+const createInitialFormData = (): AppFormData => {
   return {
-    githubConnected: Boolean(savedGithubUserId),
+    githubConnected: false,
     gitlabConnected: false,
-    githubUserId: savedGithubUserId,
-    githubUsername: savedGithubUsername,
+    githubUserId: "",
+    githubUsername: "",
     organizationId: "",
     repositoryId: "",
     branchId: "",
@@ -101,8 +101,16 @@ function App() {
         const user = await authApi.me();
         setIsAuthenticated(true);
         setAuthEmail(user.email);
+        setFormData((prev) => ({
+          ...prev,
+          githubConnected: Boolean(user.githubId),
+          githubUserId: user.githubId ?? "",
+          githubUsername: user.githubUsername ?? "",
+        }));
       } catch (_error) {
         setIsAuthenticated(false);
+        clearGithubSession();
+        setFormData(createInitialFormData());
       } finally {
         setAuthLoading(false);
       }
@@ -245,6 +253,14 @@ function App() {
 
     try {
       const user = await authApi.login(email, password);
+      clearGithubSession();
+      setFormData(() => ({
+        ...createInitialFormData(),
+        githubConnected: Boolean(user.githubId),
+        githubUserId: user.githubId ?? "",
+        githubUsername: user.githubUsername ?? "",
+      }));
+      setCurrentStep(1);
       setIsAuthenticated(true);
       setAuthEmail(user.email);
       navigate("/", { replace: true });
@@ -285,6 +301,14 @@ function App() {
 
     try {
       const user = await authApi.verifyOtp(email, otp);
+      clearGithubSession();
+      setFormData(() => ({
+        ...createInitialFormData(),
+        githubConnected: Boolean(user.githubId),
+        githubUserId: user.githubId ?? "",
+        githubUsername: user.githubUsername ?? "",
+      }));
+      setCurrentStep(1);
       setIsAuthenticated(true);
       setAuthEmail(user.email);
       navigate("/", { replace: true });
@@ -318,9 +342,11 @@ function App() {
 
   const handleLogout = async (): Promise<void> => {
     await authApi.logout();
+    clearGithubSession();
     setIsAuthenticated(false);
     setAuthEmail("");
     setCurrentStep(1);
+    setFormData(createInitialFormData());
     setCreateWebAppError(null);
     navigate("/login", { replace: true });
   };

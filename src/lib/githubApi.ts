@@ -15,17 +15,10 @@ const parseJsonResponse = async <T>(response: Response): Promise<T> => {
 const request = async <T>(
   path: string,
   options?: RequestInit,
-  githubUserId?: string,
 ): Promise<T> => {
-  const headers = new Headers(options?.headers);
-
-  if (githubUserId) {
-    headers.set('x-github-user-id', githubUserId);
-  }
-
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers,
+    credentials: 'include',
   });
 
   return parseJsonResponse<T>(response);
@@ -42,11 +35,9 @@ export const githubApi = {
     );
   },
 
-  getOrganizations: async (githubUserId: string): Promise<Organization[]> => {
+  getOrganizations: async (): Promise<Organization[]> => {
     const orgs = await request<Array<{ id: number; login: string; avatar_url: string }>>(
       '/git/github/orgs',
-      undefined,
-      githubUserId,
     );
 
     return orgs.map((org) => ({
@@ -56,12 +47,10 @@ export const githubApi = {
     }));
   },
 
-  getRepositories: async (org: string | undefined, githubUserId: string): Promise<Repository[]> => {
+  getRepositories: async (org: string | undefined): Promise<Repository[]> => {
     const query = org ? `?org=${encodeURIComponent(org)}` : '';
     const repos = await request<Array<{ name: string; full_name: string }>>(
       `/git/github/repos${query}`,
-      undefined,
-      githubUserId,
     );
 
     return repos.map((repo) => {
@@ -77,11 +66,9 @@ export const githubApi = {
     });
   },
 
-  getBranches: async (owner: string, repo: string, githubUserId: string): Promise<Branch[]> => {
+  getBranches: async (owner: string, repo: string): Promise<Branch[]> => {
     const branches = await request<Array<{ name: string }>>(
       `/git/github/branches?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`,
-      undefined,
-      githubUserId,
     );
 
     return branches.map((branch) => ({

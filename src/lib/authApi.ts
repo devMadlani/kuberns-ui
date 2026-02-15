@@ -10,6 +10,8 @@ type ApiResponse<T> = {
 type AuthUser = {
   id: string;
   email: string;
+  githubId?: string | null;
+  githubUsername?: string | null;
 };
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {

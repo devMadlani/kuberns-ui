@@ -149,7 +149,7 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
 
   useEffect(() => {
     const loadOrganizations = async (): Promise<void> => {
-      if (!formData.githubConnected || !formData.githubUserId) {
+      if (!formData.githubConnected) {
         setOrganizations([]);
         setRepositories([]);
         setBranches([]);
@@ -160,7 +160,7 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
       setGithubDataError(null);
 
       try {
-        const data = await githubApi.getOrganizations(formData.githubUserId);
+        const data = await githubApi.getOrganizations();
         setOrganizations(data);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to load organizations';
@@ -171,11 +171,11 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
     };
 
     void loadOrganizations();
-  }, [formData.githubConnected, formData.githubUserId]);
+  }, [formData.githubConnected]);
 
   useEffect(() => {
     const loadRepositories = async (): Promise<void> => {
-      if (!formData.githubUserId) {
+      if (!formData.githubConnected) {
         setRepositories([]);
         setBranches([]);
         return;
@@ -193,7 +193,6 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
       try {
         const data = await githubApi.getRepositories(
           requireOrganizationSelection ? formData.organizationId : undefined,
-          formData.githubUserId,
         );
         setRepositories(data);
       } catch (error) {
@@ -205,7 +204,7 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
     };
 
     void loadRepositories();
-  }, [formData.organizationId, formData.githubUserId, requireOrganizationSelection]);
+  }, [formData.githubConnected, formData.organizationId, requireOrganizationSelection]);
 
   const selectedRepository = useMemo(() => {
     return repositories.find((repo) => repo.id === formData.repositoryId);
@@ -213,7 +212,7 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
 
   useEffect(() => {
     const loadBranches = async (): Promise<void> => {
-      if (!selectedRepository || !selectedRepository.owner || !selectedRepository.repoName || !formData.githubUserId) {
+      if (!selectedRepository || !selectedRepository.owner || !selectedRepository.repoName || !formData.githubConnected) {
         setBranches([]);
         return;
       }
@@ -225,7 +224,6 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
         const data = await githubApi.getBranches(
           selectedRepository.owner,
           selectedRepository.repoName,
-          formData.githubUserId,
         );
         setBranches(data);
       } catch (error) {
@@ -237,7 +235,7 @@ export function Screen1({ formData, onFormDataChange, onNext }: Screen1Props) {
     };
 
     void loadBranches();
-  }, [formData.githubUserId, selectedRepository]);
+  }, [formData.githubConnected, selectedRepository]);
 
   const canProceed =
     formData.githubConnected &&

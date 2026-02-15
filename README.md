@@ -1,507 +1,278 @@
-# Kuberns – Full Stack Cloud Deployment Platform
+# Kuberns Frontend
 
-## Overview
+Frontend application for Kuberns cloud deployment platform.
 
-This project implements the "Create New App" workflow described in the Kuberns Full Stack Assessment. The goal was to design and build a self-service cloud deployment system similar to platforms like Heroku, Vercel, Render, or Railway.
+## 1. What This App Does
 
-The system allows users to:
+- Handles authentication UI (register/login/OTP).
+- Connects GitHub repositories.
+- Runs a 2-step "Create New App" flow.
+- Lists webapps, deployment status, and logs.
+- Triggers deployment start and tracks progress.
+- Provides dark/light theme and responsive layout.
 
-- Register and authenticate
-- Connect GitHub
-- Select organization, repository, and branch
-- Configure application settings
-- Configure environment variables
-- Select region and plan
-- Launch an AWS EC2 instance
-- Track deployment status
-- View deployment logs
-- Retrieve the public IP address of the deployed instance
+## 2. Tech Stack
 
-The application is built with production-level architectural principles, clean separation of concerns, and region-safe AWS provisioning.
+- React 18 + TypeScript
+- Vite
+- React Router
+- Tailwind CSS
+- Lucide icons
+- Fetch API (cookie-based auth requests)
 
----
+## 3. Setup Instructions
 
-## Tech Stack
+### Prerequisites
 
-### Backend
+- Node.js 18+ (20 recommended)
+- Backend service running
 
-- Node.js
-- Express
-- TypeScript (strict mode)
-- Prisma ORM
-- PostgreSQL
-- AWS SDK v3
-- Zod for validation
-- Clean Architecture
-- Dependency Injection pattern
-- Repository pattern
+### Install
 
-### Frontend
-
-- React
-- JWT-based authentication
-- Multi-step application setup flow
-
----
-
-## System Architecture
-
-The backend follows a layered architecture:
-
-Controller → Service → Repository → Prisma
-
-Responsibilities:
-
-- Controller: Handles HTTP layer only
-- Service: Contains business logic
-- Repository: Handles database access only
-- AWS Service: Handles cloud provisioning logic
-
-This structure ensures:
-
-- Separation of concerns
-- Testability
-- Scalability
-- Maintainability
-- Replaceable infrastructure layer
-
-No AWS logic exists inside controllers.
-No database queries exist inside controllers.
-All external integrations are isolated within services.
-
----
-
-## Data Model Design
-
-The data model was designed to support multi-environment and multi-deployment scenarios in the future.
-
-Entity Relationship:
-
-User  
- └── WebApp  
- └── Environment  
- └── Instance  
- └── Deployment  
- └── DeploymentLog
-
-### User
-
-- id
-- email (optional, unique)
-- password (optional)
-- emailVerified
-- emailOtpHash
-- emailOtpExpiry
-- githubId (optional, unique)
-- githubUsername
-- githubToken
-- createdAt
-- updatedAt
-
-### WebApp
-
-- id
-- name
-- userId
-- region
-- plan
-- framework
-- repoProvider
-- repoOwner
-- repoName
-- defaultBranch
-- createdAt
-- updatedAt
-
-Unique constraint: (userId, name)
-Index: userId
+```bash
+cd kuberns-app
+npm install
+```
 
 ### Environment
 
-- id
-- webAppId
-- name (default: production)
-- branch
-- port
-- envVars (JSONB)
-- status
-- createdAt
-- updatedAt
-Index: webAppId
-
-### Instance
-
-- id
-- environmentId
-- cpu
-- ram
-- storage
-- instanceType
-- publicIp
-- status
-- createdAt
-- updatedAt
-
-### Deployment
-
-- id
-- webAppId
-- environmentId
-- status (pending → provisioning → active → failed)
-- startedAt
-- finishedAt
-- errorMessage
-- createdAt
+Create `.env`:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+### Run
+
+```bash
+npm run dev
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+Preview build:
+
+```bash
+npm run preview
+```
+
+## 4. Frontend Architecture
+
+### High-level
+
+```text
+UI Components
+  -> API Clients (authApi / githubApi / webappApi)
+  -> Backend REST endpoints
+```
+
+### Runtime Flow
+
+```mermaid
+flowchart LR
+  A[User Action] --> B[React Component]
+  B --> C[lib/*Api.ts]
+  C --> D[Backend API]
+  D --> C
+  C --> E[State Update]
+  E --> F[UI Re-render]
+```
 
-### DeploymentLog
+### Source Structure
 
-- id
-- deploymentId
-- level (info | error)
-- message
-- createdAt
-Index: deploymentId
+```text
+src/
+  main.tsx
+  App.tsx
+  components/
+    Layout.tsx
+    AuthPage.tsx
+    Screen1.tsx
+    Screen2.tsx
+    WebappsPage.tsx
+    ui/
+  contexts/
+    ThemeContext.tsx
+  lib/
+    authApi.ts
+    githubApi.ts
+    webappApi.ts
+  types/
+```
+
+### Frontend Layering
+
+The frontend follows a lightweight layered structure:
 
-### Relationship Notes (Implemented)
+```text
+Pages/Container Components
+  -> Presentational Components
+  -> API Client Layer (lib/*.ts)
+  -> Backend
+```
 
-- One `User` can own many `WebApp`
-- One `WebApp` can have many `Environment`
-- One `Environment` has one `Instance` (1:1 via unique `environmentId`)
-- One `WebApp` can have many `Deployment`
-- One `Deployment` can have many `DeploymentLog`
+- Container components (`App.tsx`, `Screen1.tsx`, `WebappsPage.tsx`) orchestrate data flow and side effects.
+- Presentational components focus on UI rendering and local interactions.
+- API clients (`authApi`, `githubApi`, `webappApi`) isolate HTTP protocol details.
 
-### Configuration/API Models (Added)
+This keeps fetch logic out of UI-heavy components and makes behavior easier to reason about.
 
-These are backend-served configuration models used by frontend setup screens.
+### State Management Strategy
 
-#### MetadataResponse (`GET /api/metadata`)
+- Global app state:
+  - Authentication/session state in `App.tsx`.
+  - Theme state in `ThemeContext`.
+- Feature-local state:
+  - Form step state (`currentStep`) and create-form payload.
+  - Deployment detail/log loading states inside webapp pages.
+- URL state:
+  - Router path controls primary screen.
+  - Route state carries auto-deploy handoff (`autoDeployWebAppId`, `autoDeployDeploymentId`).
 
-- regions: `RegionMeta[]`
-- frameworks: `FrameworkMeta[]`
-- databaseTypes: `DatabaseTypeMeta[]`
+### Dependency and Control Flow
 
-#### RegionMeta
+- UI depends on typed API clients only.
+- API clients depend on `fetch` and typed response parsing.
+- Components do not call backend URLs directly.
 
-- id (AWS region id, e.g. `ap-south-1`)
-- name (display label)
-- country (display country/zone code)
+This dependency direction prevents tight coupling between UI markup and transport logic.
 
-#### FrameworkMeta
+## 5. UI and State Design Decisions
 
-- id (e.g. `react`, `next`, `node`)
-- name (display name)
+- App-level orchestration is in `App.tsx`:
+  - auth session bootstrap (`/auth/me`)
+  - route guarding
+  - create-flow step control
+  - post-create redirect + auto-deploy handoff
+- API concerns are isolated in `src/lib/*Api.ts`.
+- Components are mostly presentation + local interaction state.
+- Cookies are used for auth (`credentials: include` on requests).
+- Theme state is centralized in `ThemeContext`.
 
-#### DatabaseTypeMeta
+### Route Composition Decision
 
-- id (e.g. `postgresql`, `mysql`, `mongodb`)
-- name (display name)
+`App.tsx` acts as composition root for frontend behavior:
 
-#### PlanConfig (Backend source model)
+- Injects handlers (`onLogout`, `onOpenWebapps`, `onAddNew`) into shared `Layout`.
+- Controls protected vs public route rendering.
+- Centralizes post-auth and post-create navigation decisions.
 
-- id (`starter` | `pro`)
-- name
-- storage
-- bandwidth
-- memory
-- cpu
-- monthlyCost
-- pricePerHour
-- description
-- resources
+This avoids scattering auth and navigation policy across many components.
 
-#### PlanResourceConfig (`PlanConfig.resources`)
+## 6. Frontend Routes
 
-- cpu (number)
-- ram (MB)
-- storage (GB)
-- instanceType (AWS instance type)
+Handled in `App.tsx`:
 
-#### PlanResponse (`GET /api/plans`)
+- `/login` -> Auth page
+- `/register` -> Auth page
+- `/` -> Create app flow (Screen1/Screen2)
+- `/webapps` -> Webapps + deployment view
+- `/oauth/github/callback` -> OAuth callback processing UI
 
-- id
-- name
-- storage
-- bandwidth
-- memory
-- cpu
-- monthlyCost
-- pricePerHour
-- description
+Unauthorized users are redirected to `/login`.
 
-This design ensures strong relational integrity, multi-tenant safety, and clean lifecycle tracking.
+## 7. Backend Integration Map (Used by Frontend)
 
----
+### Auth (`src/lib/authApi.ts`)
 
-## WebApp Creation Strategy
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
+- `POST /auth/verify-otp`
+- `POST /auth/resend-otp`
+- `POST /auth/logout`
 
-When the user clicks “Finish My Setup”:
+### GitHub (`src/lib/githubApi.ts`)
 
-1. WebApp is created
-2. Default Environment is created
-3. Instance configuration is created (logical infra configuration)
-4. Deployment record is created with status = pending
-5. Provisioning process starts
+- `GET /git/github/oauth/url`
+- `GET /git/github/callback?code=...`
+- `GET /git/github/orgs`
+- `GET /git/github/repos?org=...`
+- `GET /git/github/branches?owner=...&repo=...`
 
-All database operations are wrapped in a Prisma transaction to ensure atomicity.
+### WebApps and Deployments (`src/lib/webappApi.ts`)
 
----
+- `POST /webapps`
+- `GET /webapps`
+- `GET /webapps/:id`
+- `POST /deployments/:deploymentId/start` (empty `{}` body by default)
+- `GET /deployments/:id/logs`
+- `GET /metadata`
+- `GET /plans`
 
-## AWS EC2 Provisioning Strategy
+## 8. Create App Flow
 
-### Multi-Region Support
+### Step 1 (`Screen1`)
 
-The system supports major AWS regions including:
+- GitHub connection + repo/branch selection.
+- App details: name, region, framework.
+- Plan selection.
+- Optional database choice.
 
-- us-east-1
-- us-east-2
-- us-west-1
-- us-west-2
-- ap-south-1
-- eu-central-1
-- and others
+### Step 2 (`Screen2`)
 
-The region selected by the user is used to initialize region-scoped AWS clients:
+- Port configuration.
+- Environment variables.
+- Submit to create webapp.
 
-EC2Client({ region })
-SSMClient({ region })
+On success:
 
-No region is hardcoded in the application.
+1. Create webapp request returns `{ webAppId, deploymentId, status: "pending" }`.
+2. Frontend navigates to `/webapps` with state:
+   - `autoDeployWebAppId`
+   - `autoDeployDeploymentId`
+3. Webapps page triggers deployment start and polling UX.
 
----
+## 9. Deployment UX Notes
 
-### Dynamic AMI Resolution
+- Start deployment button calls `/deployments/:id/start`.
+- Logs are loaded via `/deployments/:id/logs`.
+- Deployment cards display status and errors.
+- Public IP is masked by default and can be toggled.
 
-Problem encountered:
+### Details Drawer (Webapps Page)
 
-AMI IDs are region-scoped. When a hardcoded AMI ID was used across regions, AWS returned:
+- On mobile, webapp details open in a right-side drawer.
+- Drawer state is controlled by `isDrawerOpen` in `WebappsPage.tsx`.
+- Drawer can be closed by:
+  - close button,
+  - backdrop click,
+  - `Escape` key.
+- Desktop uses an inline details panel; mobile uses the drawer with the same content component.
 
-InvalidAMIID.NotFound
+### Public IP Handling
 
-Solution implemented:
+- Instance public IP is intentionally hidden by default in UI.
+- Masking behavior:
+  - masked format shown initially (digits replaced with `*`).
+  - user can toggle `Show`/`Hide` per environment.
+- Toggle state is stored per environment in `showPublicIpByEnvironmentId`.
+- This reduces accidental leakage during demos/screen sharing while keeping quick access when needed.
 
-The system dynamically resolves the correct Amazon Linux AMI for the selected region using AWS Systems Manager public parameters:
+## 10. Design System Notes
 
-/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+- Shared reusable UI primitives under `components/ui`.
+- Custom dropdown styling via `components/ui/select.tsx` used across forms.
+- Navbar supports:
+  - home logo navigation
+  - active project indicator
+  - dark/light theme toggle
+  - actionable Add New button
 
-Using SSM GetParameter ensures:
+## 11. Scripts
 
-- Region-safe deployments
-- No hardcoded AMI IDs
-- Automatic AMI updates
-- Future-proof provisioning
+- `npm run dev` - start Vite dev server
+- `npm run build` - type-check + build
+- `npm run preview` - preview production build
+- `npm run lint` - lint frontend code
 
----
+## 12. Troubleshooting
 
-### IAM Permission Issue
-
-During development, provisioning failed with:
-
-ssm:GetParameter not authorized
-
-Root cause:
-The IAM user did not have permission to read SSM parameters.
-
-Resolution:
-Added minimal policy allowing:
-
-ssm:GetParameter
-
-This ensured dynamic AMI resolution worked correctly.
-
----
-
-## Deployment Lifecycle
-
-Deployment state transitions:
-
-pending  
-→ provisioning  
-→ active
-
-If failure occurs:
-
-→ failed
-
-During provisioning:
-
-- AMI is resolved dynamically
-- EC2 instance is launched
-- System waits until instance is running
-- Public IP address is retrieved
-- Instance record is updated
-- Deployment status is updated
-- Deployment logs are inserted
-
-All major steps are recorded in the DeploymentLog table.
-
----
-
-## Plan to Instance Mapping
-
-Application plan determines infrastructure configuration:
-
-starter:
-
-- t2.micro
-- 1 CPU
-- 1024 MB RAM
-
-pro:
-
-- t3.medium
-- 2 CPU
-- 4096 MB RAM
-
-Mapping is handled in the service layer and not in controllers.
-
----
-
-## API Endpoints
-
-Authentication
-
-- POST /auth/register
-- POST /auth/login
-
-GitHub Integration
-
-- GET /git/github/orgs
-- GET /git/github/repos
-- GET /git/github/branches
-
-WebApps
-
-- POST /webapps
-- GET /webapps
-- GET /webapps/:id
-
-Deployment
-
-- POST /deployments/:id/start
-- GET /deployments/:id
-- GET /deployments/:id/logs
-
----
-
-## Security Considerations
-
-- JWT-based authentication middleware
-- Environment variables stored securely
-- No AWS credentials logged
-- Region validation enforced
-- Zod validation for all inputs
-- Unique WebApp name per user
-- Clean separation between user and resource ownership
-
----
-
-## Key Engineering Decisions
-
-1. Used dependency injection for service wiring.
-2. Implemented repository pattern for database abstraction.
-3. Used Prisma transactions for atomic operations.
-4. Avoided hardcoded AMI IDs.
-5. Implemented region-scoped AWS clients.
-6. Solved IAM permission edge cases.
-7. Designed deployment lifecycle tracking.
-8. Persisted provisioning logs for observability.
-
----
-
-## Additional Complex Patterns Adopted
-
-1. Auto-deploy handoff after app creation:
-Created `WebApp + Deployment`, redirected to `/webapps`, and triggered deployment from redirected context instead of blocking setup flow.
-
-2. Double-trigger protection (React Strict Mode + race conditions):
-Frontend uses one-shot deploy guards, and backend uses atomic status transition checks before provisioning to prevent duplicate EC2 launches.
-
-3. Deployment idempotency at service/repository level:
-`startDeployment` only proceeds from allowed states (`pending`/`failed`), otherwise returns conflict, preventing repeated provisioning.
-
-4. Real-time-ish deployment UX synchronization:
-Drawer and list use status refresh/polling so UI transitions from `deploying` to `active` as backend state changes.
-
-5. Sensitive value masking pattern:
-Public IP is masked by default with explicit `Show/Hide` toggle to reduce accidental exposure in shared screens.
-
-6. Dedicated configuration APIs for frontend controls:
-Region/framework/database metadata are loaded from backend API and plans are loaded from a separate plans API, reducing frontend hardcoding.
-
-7. Single-source plan strategy:
-Plan definitions are centralized on backend config and reused for validation, persisted webapp plan values, and AWS instance mapping.
-
-8. Deployment observability in UI:
-Frontend now fetches and renders `DeploymentLog` entries (`/deployments/:id/logs`) with loading/error/refresh behavior.
-
----
-
-## Setup Instructions
-
-1. Clone repository.
-2. Install dependencies:
-
-   npm install
-
-3. Setup environment variables:
-
-   DATABASE_URL=
-   JWT_SECRET=
-   AWS_ACCESS_KEY_ID=
-   AWS_SECRET_ACCESS_KEY=
-
-4. Run Prisma migrations:
-
-   npx prisma migrate dev
-
-5. Start backend:
-
-   npm run dev
-
-6. Start frontend:
-
-   npm start
-
----
-
-## Time Estimate
-
-Frontend:
-8–10 hours
-
-Backend Core:
-10–12 hours
-
-AWS Provisioning:
-6–8 hours
-
-Documentation and Testing:
-3–4 hours
-
----
-
-## Future Improvements
-
-- Async job queue for non-blocking provisioning
-- Auto-deploy on Git push
-- Docker-based builds
-- Load balancer integration
-- HTTPS automation
-- CI/CD pipeline integration
-- Multi-environment (staging/preview) support
-
----
-
-## Conclusion
-
-This project demonstrates:
-
-- Full-stack system design
-- Clean architectural layering
-- Dependency Injection strategy
-- Scalable relational data modeling
-- Region-safe AWS provisioning
-- Secure IAM handling
-- Deployment lifecycle management
-
-The system fully implements the required Create New App workflow and completes the AWS EC2 provisioning challenge described in the assessment.
+- If auth appears broken, verify backend CORS and cookie settings.
+- If API calls fail, verify `VITE_API_BASE_URL`.
+- If GitHub callback fails, verify backend GitHub env vars and callback URL.
+- If deployment start fails, inspect backend deployment logs (`/deployments/:id/logs` and server logs).

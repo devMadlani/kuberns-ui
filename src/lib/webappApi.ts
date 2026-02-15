@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000";
 
 export type CreateWebAppRequest = {
   name: string;
@@ -18,7 +19,7 @@ export type CreateWebAppRequest = {
 export type CreateWebAppResponse = {
   webAppId: string;
   deploymentId: string;
-  status: 'pending';
+  status: "pending";
 };
 
 export type MetadataResponse = {
@@ -86,7 +87,7 @@ export type DeploymentLogEntry = {
 
 export type StartDeploymentResponse = {
   publicIp: string;
-  status: 'active';
+  status: "active";
 };
 
 export type EnvironmentSummary = {
@@ -111,9 +112,9 @@ export type WebAppDetail = WebAppListItem & {
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    credentials: 'include',
+    credentials: "include",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
   });
@@ -122,9 +123,9 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
   if (!response.ok) {
     const message =
-      payload && typeof payload === 'object' && 'message' in payload
-        ? String((payload as { message?: unknown }).message ?? 'Request failed')
-        : 'Request failed';
+      payload && typeof payload === "object" && "message" in payload
+        ? String((payload as { message?: unknown }).message ?? "Request failed")
+        : "Request failed";
     throw new Error(message);
   }
 
@@ -132,39 +133,48 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 };
 
 export const webappApi = {
-  createWebApp: async (input: CreateWebAppRequest): Promise<CreateWebAppResponse> => {
-    return request<CreateWebAppResponse>('/api/webapps', {
-      method: 'POST',
+  createWebApp: async (
+    input: CreateWebAppRequest,
+  ): Promise<CreateWebAppResponse> => {
+    return request<CreateWebAppResponse>("/webapps", {
+      method: "POST",
       body: JSON.stringify(input),
     });
   },
 
   listWebApps: async (): Promise<WebAppListItem[]> => {
-    return request<WebAppListItem[]>('/api/webapps', { method: 'GET' });
+    return request<WebAppListItem[]>("/webapps", { method: "GET" });
   },
 
   getWebApp: async (id: string): Promise<WebAppDetail> => {
-    return request<WebAppDetail>(`/api/webapps/${id}`, { method: 'GET' });
+    return request<WebAppDetail>(`/webapps/${id}`, { method: "GET" });
   },
 
-  startDeployment: async (deploymentId: string): Promise<StartDeploymentResponse> => {
-    return request<StartDeploymentResponse>(`/api/deployments/${deploymentId}/start`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
+  startDeployment: async (
+    deploymentId: string,
+  ): Promise<StartDeploymentResponse> => {
+    return request<StartDeploymentResponse>(
+      `/deployments/${deploymentId}/start`,
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+    );
   },
 
-  getDeploymentLogs: async (deploymentId: string): Promise<DeploymentLogEntry[]> => {
-    return request<DeploymentLogEntry[]>(`/api/deployments/${deploymentId}/logs`, {
-      method: 'GET',
+  getDeploymentLogs: async (
+    deploymentId: string,
+  ): Promise<DeploymentLogEntry[]> => {
+    return request<DeploymentLogEntry[]>(`/deployments/${deploymentId}/logs`, {
+      method: "GET",
     });
   },
 
   getMetadata: async (): Promise<MetadataResponse> => {
-    return request<MetadataResponse>('/api/metadata', { method: 'GET' });
+    return request<MetadataResponse>("/metadata", { method: "GET" });
   },
 
   getPlans: async (): Promise<PlanResponse[]> => {
-    return request<PlanResponse[]>('/api/plans', { method: 'GET' });
+    return request<PlanResponse[]>("/plans", { method: "GET" });
   },
 };

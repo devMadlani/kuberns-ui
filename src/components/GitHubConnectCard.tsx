@@ -38,15 +38,15 @@ export function GitHubConnectCard({
           <Button
             variant={githubConnected ? 'default' : 'outline'}
             className={`flex-1 h-auto py-4 px-6 flex items-center justify-between ${
-              githubConnected ? 'bg-primary text-white' : ''
+              githubConnected ? 'bg-primary text-white disabled:opacity-100' : ''
             }`}
             onClick={onGithubConnect}
-            disabled={githubLoading}
+            disabled={githubLoading || githubConnected}
           >
             <div className="flex items-center gap-3">
               <Github className="h-5 w-5" />
               <span className="font-medium">
-                {githubLoading ? 'Connecting...' : githubConnected ? 'Reconnect Github' : 'Connect Github'}
+                {githubLoading ? 'Connecting...' : githubConnected ? 'Github Connected' : 'Connect Github'}
               </span>
             </div>
             {githubConnected ? (
